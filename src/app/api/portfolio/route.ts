@@ -1,37 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 
-const dbPath = path.join(process.cwd(), "src", "data", "portfolio.db.json");
+const DB_URL = "https://extendsclass.com/api/json-storage/bin/fdfccdb";
 
-// Read helper
-function readDb() {
-  try {
-    if (!fs.existsSync(dbPath)) {
-      return [];
-    }
-    const data = fs.readFileSync(dbPath, "utf-8");
-    return JSON.parse(data || "[]");
-  } catch (err) {
-    console.error("Failed to read portfolio DB:", err);
-    return [];
-  }
-}
-
-// Write helper
-function writeDb(data: any) {
-  try {
-    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.error("Failed to write portfolio DB:", err);
-  }
-}
-
+// GET all portfolio items
 export async function GET() {
-  const items = readDb();
-  return NextResponse.json(items);
+  try {
+    const res = await fetch(DB_URL, { cache: "no-store" });
+    if (!res.ok) {
+      return NextResponse.json([], { status: 200 });
+    }
+    const items = await res.json();
+    return NextResponse.json(Array.isArray(items) ? items : []);
+  } catch (err) {
+    console.error("Failed to read extendsclass portfolio:", err);
+    return NextResponse.json([]);
+  }
 }
 
+// POST new portfolio item
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -44,53 +30,54 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Title and category are required." }, { status: 400 });
     }
 
-    let mediaUrl = "";
-    let type: "image" | "video" = "image";
-
-    if (file) {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      // Create unique filename
-      const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
-      const filename = `${Date.now()}-${safeName}`;
-      
-      const uploadDir = path.join(process.cwd(), "public", "uploads");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      fs.writeFileSync(path.join(uploadDir, filename), buffer);
-      mediaUrl = `/uploads/${filename}`;
-
-      // Determine type
-      if (file.type.startsWith("video") || filename.endsWith(".mp4") || filename.endsWith(".mov") || filename.endsWith(".webm")) {
-        type = "video";
-      }
-    } else if (instagramUrl) {
-      // If no file but there is an instagramUrl, we can use the category cover as default thumbnail
-      if (category.toLowerCase().includes("automotive")) {
-        mediaUrl = "/assets/images/car.png";
-      } else if (category.toLowerCase().includes("decor")) {
-        mediaUrl = "/assets/images/decor.png";
-      } else if (category.toLowerCase().includes("wedding")) {
-        mediaUrl = "/assets/images/wedding.png";
-      } else {
-        mediaUrl = "/assets/images/haldi.png";
-      }
-      type = instagramUrl.includes("/reel/") ? "video" : "image";
-    } else {
-      return NextResponse.json({ error: "Either a file upload or an Instagram URL is required." }, { status: 400 });
+    if (file && file.size > 0) {
+      // Direct file upload is not supported in read-only Vercel serverless environment
+      return NextResponse.json({
+        error: "Direct file uploads are not supported on Vercel serverless hosting. Please enter an Instagram Post / Reel URL instead, which will be loaded dynamically in high-resolution."
+      }, { status: 400 });
     }
 
-    const items = readDb();
+    if (!instagramUrl) {
+      return NextResponse.json({ error: "An Instagram Post or Reel URL is required." }, { status: 400 });
+    }
+
+    let mediaUrl = "";
+    const lowerCategory = category.toLowerCase();
+    
+    // Set default category image fallback
+    if (lowerCategory.includes("automotive")) {
+      mediaUrl = "/assets/images/car.png";
+    } else if (lowerCategory.includes("decor") || lowerCategory.includes("estate")) {
+      mediaUrl = "/assets/images/decor.png";
+    } else if (lowerCategory.includes("wedding")) {
+      mediaUrl = "/assets/images/wedding.png";
+    } else {
+      mediaUrl = "/assets/images/haldi.png";
+    }
+
+    const type = instagramUrl.includes("/reel/") ? "video" : "image";
+
+    // Get current portfolio database
+    let items = [];
+    try {
+      const getRes = await fetch(DB_URL, { cache: "no-store" });
+      if (getRes.ok) {
+        items = await getRes.json();
+      }
+    } catch (e) {
+      console.warn("Could not read current portfolio, starting fresh");
+    }
+
+    if (!Array.isArray(items)) {
+      items = [];
+    }
     
     // Create new item
     const newItem = {
       id: Date.now(),
       title,
       category,
-      instagramUrl: instagramUrl || "",
+      instagramUrl,
       mediaUrl,
       type,
       likes: `${(Math.random() * 20 + 2).toFixed(1)}K`,
@@ -98,7 +85,17 @@ export async function POST(request: NextRequest) {
     };
 
     items.push(newItem);
-    writeDb(items);
+
+    // Save updated portfolio
+    const putRes = await fetch(DB_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(items)
+    });
+
+    if (!putRes.ok) {
+      throw new Error("Failed to write to database bin");
+    }
 
     return NextResponse.json({ success: true, item: newItem });
   } catch (err: any) {
@@ -107,6 +104,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// DELETE portfolio item
 export async function DELETE(request: NextRequest) {
   try {
     const { id } = await request.json();
@@ -114,29 +112,29 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Item ID is required." }, { status: 400 });
     }
 
-    const items = readDb();
-    const itemIndex = items.findIndex((item: any) => item.id === Number(id));
-
-    if (itemIndex === -1) {
-      return NextResponse.json({ error: "Item not found." }, { status: 404 });
+    // Get current portfolio database
+    let items = [];
+    const getRes = await fetch(DB_URL, { cache: "no-store" });
+    if (getRes.ok) {
+      items = await getRes.json();
     }
 
-    const itemToDelete = items[itemIndex];
-
-    // If it's a locally uploaded file, delete it from public/uploads
-    if (itemToDelete.mediaUrl && itemToDelete.mediaUrl.startsWith("/uploads/")) {
-      try {
-        const filePath = path.join(process.cwd(), "public", itemToDelete.mediaUrl);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      } catch (err) {
-        console.error("Failed to delete local file:", err);
-      }
+    if (!Array.isArray(items)) {
+      return NextResponse.json({ error: "No portfolio database found." }, { status: 404 });
     }
 
-    items.splice(itemIndex, 1);
-    writeDb(items);
+    const filtered = items.filter((item: any) => item.id !== Number(id));
+
+    // Save updated portfolio
+    const putRes = await fetch(DB_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(filtered)
+    });
+
+    if (!putRes.ok) {
+      throw new Error("Failed to update database bin");
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

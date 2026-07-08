@@ -1,39 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 
-const dbPath = path.join(process.cwd(), "src", "data", "bookings.db.json");
+const DB_URL = "https://extendsclass.com/api/json-storage/bin/aacfeca";
 
-// Read helper
-function readDb() {
-  try {
-    if (!fs.existsSync(dbPath)) {
-      return [];
-    }
-    const data = fs.readFileSync(dbPath, "utf-8");
-    return JSON.parse(data || "[]");
-  } catch (err) {
-    console.error("Failed to read bookings DB:", err);
-    return [];
-  }
-}
-
-// Write helper
-function writeDb(data: any) {
-  try {
-    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.error("Failed to write bookings DB:", err);
-  }
-}
-
+// GET all bookings
 export async function GET() {
-  const items = readDb();
-  // Sort by ID (timestamp) descending (newest first)
-  const sorted = items.sort((a: any, b: any) => b.id - a.id);
-  return NextResponse.json(sorted);
+  try {
+    const res = await fetch(DB_URL, { cache: "no-store" });
+    if (!res.ok) {
+      return NextResponse.json([], { status: 200 });
+    }
+    const items = await res.json();
+    // Sort by ID descending (newest first)
+    const sorted = Array.isArray(items) ? items.sort((a: any, b: any) => b.id - a.id) : [];
+    return NextResponse.json(sorted);
+  } catch (err) {
+    console.error("Failed to read extendsclass bookings:", err);
+    return NextResponse.json([]);
+  }
 }
 
+// POST new booking
 export async function POST(request: NextRequest) {
   try {
     const { name, contact, plan, date, brief } = await request.json();
@@ -42,8 +28,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name, contact, and plan are required." }, { status: 400 });
     }
 
-    const items = readDb();
-    
+    // Get current bookings
+    let items = [];
+    try {
+      const getRes = await fetch(DB_URL, { cache: "no-store" });
+      if (getRes.ok) {
+        items = await getRes.json();
+      }
+    } catch (e) {
+      console.warn("Could not read current bookings, starting fresh");
+    }
+
+    if (!Array.isArray(items)) {
+      items = [];
+    }
+
     const newBooking = {
       id: Date.now(),
       name,
@@ -55,7 +54,17 @@ export async function POST(request: NextRequest) {
     };
 
     items.push(newBooking);
-    writeDb(items);
+
+    // Save updated list
+    const putRes = await fetch(DB_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(items)
+    });
+
+    if (!putRes.ok) {
+      throw new Error("Failed to write to database bin");
+    }
 
     return NextResponse.json({ success: true, booking: newBooking });
   } catch (err: any) {
@@ -64,6 +73,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// DELETE booking
 export async function DELETE(request: NextRequest) {
   try {
     const { id } = await request.json();
@@ -71,15 +81,29 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Booking ID is required." }, { status: 400 });
     }
 
-    const items = readDb();
-    const index = items.findIndex((item: any) => item.id === Number(id));
-
-    if (index === -1) {
-      return NextResponse.json({ error: "Booking not found." }, { status: 404 });
+    // Get current bookings
+    let items = [];
+    const getRes = await fetch(DB_URL, { cache: "no-store" });
+    if (getRes.ok) {
+      items = await getRes.json();
     }
 
-    items.splice(index, 1);
-    writeDb(items);
+    if (!Array.isArray(items)) {
+      return NextResponse.json({ error: "No bookings database found." }, { status: 404 });
+    }
+
+    const filtered = items.filter((item: any) => item.id !== Number(id));
+
+    // Save updated list
+    const putRes = await fetch(DB_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(filtered)
+    });
+
+    if (!putRes.ok) {
+      throw new Error("Failed to update database bin");
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
