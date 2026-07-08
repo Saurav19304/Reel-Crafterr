@@ -12,36 +12,48 @@ export default function BookingForm() {
     details: '',
   });
   const [submitted, setSubmitted] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const generateDMText = () => {
-    return `Hey Sahir! I'd love to chat about a shoot:
-- Name: ${formData.name}
-- Contact: ${formData.contact}
-- Type: ${formData.type}
-- Date: ${formData.date || 'TBD'}
-- Budget: ${formData.budget || 'Open'}
-- Details: ${formData.details}`;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.contact) {
       alert('Please fill out your name and Instagram / contact info!');
       return;
     }
-    setSubmitted(true);
-  };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(generateDMText());
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
+    setIsSubmitting(true);
+    setSubmitError('');
+
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          contact: formData.contact,
+          plan: `${formData.type} Shoot (Budget: ${formData.budget || 'Open'})`,
+          date: formData.date,
+          brief: formData.details,
+        }),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        const data = await res.json();
+        setSubmitError(data.error || 'Failed to submit booking inquiry.');
+      }
+    } catch (err) {
+      setSubmitError('Failed to communicate with booking server.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -168,41 +180,39 @@ export default function BookingForm() {
                 />
               </div>
 
-              <button type="submit" style={styles.submitBtn}>
-                Prepare Booking Request
+              {submitError && (
+                <div style={{ color: '#ff4d4d', fontSize: '13px', fontWeight: '600' }}>
+                  ⚠️ {submitError}
+                </div>
+              )}
+
+              <button type="submit" disabled={isSubmitting} style={styles.submitBtn}>
+                {isSubmitting ? 'Submitting Inquiry...' : 'Submit Inquiry'}
               </button>
             </form>
           ) : (
             <div style={styles.successPanel} className="glass-panel">
-              <div style={styles.successIcon}>🚀</div>
-              <h3 style={styles.successHeading}>Details Prepared!</h3>
+              <div style={styles.successIcon}>✓</div>
+              <h3 style={styles.successHeading}>Inquiry Submitted!</h3>
               <p style={styles.successText}>
-                We have generated a structured booking message. Copy the text below and send it directly to our Instagram DM to confirm.
+                Thank you, <strong>{formData.name}</strong>! Your booking inquiry has been successfully saved. We will review your project brief and contact you on <strong>{formData.contact}</strong> shortly.
               </p>
 
-              <div style={styles.msgBox}>
-                <pre style={styles.preText}>{generateDMText()}</pre>
-              </div>
-
-              <div style={styles.successBtnRow}>
-                <button onClick={copyToClipboard} style={styles.copyBtn}>
-                  {copied ? 'Copied ✅' : 'Copy Message Text'}
-                </button>
-                <a
-                  href="https://www.instagram.com/reel_crafterr/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={styles.directDmBtn}
-                >
-                  Send on Instagram
-                </a>
-              </div>
-
               <button
-                onClick={() => setSubmitted(false)}
-                style={styles.editBtn}
+                onClick={() => {
+                  setSubmitted(false);
+                  setFormData({
+                    name: '',
+                    contact: '',
+                    date: '',
+                    type: 'Wedding',
+                    budget: '',
+                    details: '',
+                  });
+                }}
+                style={styles.newBookingBtn}
               >
-                ← Edit Form Details
+                Submit Another Inquiry
               </button>
             </div>
           )}
@@ -370,56 +380,15 @@ const styles = {
     color: '#9da3ae',
     lineHeight: '1.5',
   },
-  msgBox: {
-    width: '100%',
-    padding: '16px',
-    backgroundColor: '#0c0c0e',
-    border: '1px solid rgba(255,255,255,0.06)',
-    borderRadius: '8px',
-    textAlign: 'left' as const,
-    margin: '12px 0',
-  },
-  preText: {
-    fontSize: '12px',
-    color: '#00f2fe',
-    fontFamily: 'monospace',
-    whiteSpace: 'pre-wrap' as const,
-    lineHeight: '1.5',
-  },
-  successBtnRow: {
-    display: 'flex',
-    gap: '12px',
-    width: '100%',
-  },
-  copyBtn: {
-    flex: 1,
-    padding: '12px',
+  newBookingBtn: {
+    padding: '12px 24px',
     borderRadius: '30px',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    border: '1px solid rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
     color: '#ffffff',
     fontSize: '13px',
-    fontWeight: '700',
-    cursor: 'pointer',
-  },
-  directDmBtn: {
-    flex: 1,
-    padding: '12px',
-    borderRadius: '30px',
-    backgroundColor: '#e5b842',
-    color: '#060608',
-    fontSize: '13px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    textAlign: 'center' as const,
-  },
-  editBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#9da3ae',
-    fontSize: '12px',
     fontWeight: '600',
     cursor: 'pointer',
-    marginTop: '12px',
+    transition: 'all 0.2s',
   },
 };
