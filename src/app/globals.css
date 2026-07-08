@@ -1,26 +1,241 @@
-@import "tailwindcss";
+/* Reel Crafterr - Custom Cinematic Design System */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-void: #060608;
+  --bg-card: rgba(20, 20, 25, 0.65);
+  --bg-card-hover: rgba(28, 28, 36, 0.85);
+  --accent-gold: #e5b842;
+  --accent-gold-rgb: 229, 184, 66;
+  --accent-cyan: #00f2fe;
+  --accent-cyan-rgb: 0, 242, 254;
+  --accent-orange: #ff5e62;
+  --accent-orange-rgb: 255, 94, 98;
+  
+  --text-primary: #f8f9fa;
+  --text-secondary: #9da3ae;
+  --text-muted: #646a73;
+  
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-color-hover: rgba(255, 255, 255, 0.12);
+  --glass-glow: radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent);
+  
+  --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: all 0.2s ease;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  background-color: var(--bg-void);
+  color: var(--text-primary);
+  overflow-x: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg-void);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography Custom Settings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+p {
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-void);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-gold);
+}
+
+/* Structure Utilities */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Glow effects & gradients */
+.glow-text-gold {
+  color: var(--accent-gold);
+  text-shadow: 0 0 15px rgba(var(--accent-gold-rgb), 0.3);
+}
+
+.glow-text-cyan {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 15px rgba(var(--accent-cyan-rgb), 0.3);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, var(--text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, #ffffff 10%, var(--accent-gold) 60%, var(--accent-orange) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Glassmorphism base */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  transition: var(--transition-smooth);
+}
+
+.glass-panel:hover {
+  border-color: var(--border-color-hover);
+  background: var(--bg-card-hover);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Background Glowing Blurs */
+.ambient-glow {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  filter: blur(130px);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+  transition: var(--transition-smooth);
+}
+
+.glow-gold {
+  background: radial-gradient(circle, var(--accent-gold) 0%, transparent 70%);
+}
+
+.glow-cyan {
+  background: radial-gradient(circle, var(--accent-cyan) 0%, transparent 70%);
+}
+
+.glow-orange {
+  background: radial-gradient(circle, var(--accent-orange) 0%, transparent 70%);
+}
+
+/* Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.15;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.22;
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 8s infinite alternate ease-in-out;
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-slow {
+  animation: spinSlow 20s infinite linear;
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+/* Viewfinder overlay effect */
+.viewfinder-corner {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-color: rgba(255, 255, 255, 0.4);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.vf-tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; }
+.vf-tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; }
+.vf-bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; }
+.vf-br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; }
+
+/* Hero section full-bleed background layout */
+.hero-section-bg {
+  background-image: url('/assets/images/gimbal-hero.png');
+  background-size: cover;
+  background-position: 80% center;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    linear-gradient(to top, #060608 0%, transparent 25%),
+    linear-gradient(to right, #060608 0%, #060608 30%, rgba(6, 6, 8, 0.7) 55%, rgba(6, 6, 8, 0.1) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+@media (max-width: 968px) {
+  .hero-section-bg {
+    background-position: center center;
+  }
+  .hero-overlay {
+    background: 
+      linear-gradient(to top, #060608 0%, #060608 20%, transparent 60%),
+      linear-gradient(to top, #060608 0%, #060608 60%, rgba(6, 6, 8, 0.4) 100%);
+  }
+}
+
+@keyframes spinSlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

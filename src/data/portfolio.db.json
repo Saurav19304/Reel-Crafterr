@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1,
+    "title": "The Vows Ceremony",
+    "category": "Weddings",
+    "instagramUrl": "https://www.instagram.com/p/DT5MUAeDegS/",
+    "mediaUrl": "/assets/images/wedding.png",
+    "type": "image",
+    "likes": "12.4K",
+    "views": "150K"
+  },
+  {
+    "id": 2,
+    "title": "Beast Unleashed - Dark Knight Drift",
+    "category": "Automotive",
+    "instagramUrl": "https://www.instagram.com/reel/DaezrX4hU1I/",
+    "mediaUrl": "/assets/images/car.png",
+    "type": "video",
+    "likes": "24.1K",
+    "views": "420K"
+  },
+  {
+    "id": 3,
+    "title": "Golden Hour Couple",
+    "category": "Weddings",
+    "instagramUrl": "https://www.instagram.com/reel/DaKNNZ3NgHT/",
+    "mediaUrl": "/assets/images/wedding.png",
+    "type": "video",
+    "likes": "18.2K",
+    "views": "280K"
+  },
+  {
+    "id": 4,
+    "title": "Floral Arrangement Setup",
+    "category": "Luxury Decor",
+    "instagramUrl": "https://www.instagram.com/reel/DYCTXSthaWS/",
+    "mediaUrl": "/assets/images/decor.png",
+    "type": "video",
+    "likes": "5.2K",
+    "views": "60K"
+  },
+  {
+    "id": 5,
+    "title": "Elegant Banquet Lighting",
+    "category": "Luxury Decor",
+    "instagramUrl": "https://www.instagram.com/p/DX_FebBDe1S/",
+    "mediaUrl": "/assets/images/decor.png",
+    "type": "image",
+    "likes": "8.9K",
+    "views": "95K"
+  },
+  {
+    "id": 6,
+    "title": "Urban Clothing Showcase",
+    "category": "Brands",
+    "instagramUrl": "https://www.instagram.com/reel/DXRS4n4DWGM/",
+    "mediaUrl": "/assets/images/haldi.png",
+    "type": "video",
+    "likes": "14.5K",
+    "views": "190K"
+  },
+  {
+    "id": 7,
+    "title": "Speed and Shadows - Night Rollers",
+    "category": "Automotive",
+    "instagramUrl": "https://www.instagram.com/reel/DT9_jPbDVO0/",
+    "mediaUrl": "/assets/images/car.png",
+    "type": "video",
+    "likes": "29.8K",
+    "views": "510K"
+  },
+  {
+    "id": 8,
+    "title": "Exhaust Note Symphony",
+    "category": "Automotive",
+    "instagramUrl": "https://www.instagram.com/reel/DUQ-9h7EowE/",
+    "mediaUrl": "/assets/images/car.png",
+    "type": "video",
+    "likes": "35.1K",
+    "views": "620K"
+  },
+  {
+    "id": 9,
+    "title": "Product Cinematography",
+    "category": "Brands",
+    "instagramUrl": "https://www.instagram.com/reel/DRoV6r8EX_T/",
+    "mediaUrl": "/assets/images/wedding.png",
+    "type": "video",
+    "likes": "9.4K",
+    "views": "115K"
+  }
+]
