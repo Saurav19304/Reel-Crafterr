@@ -165,14 +165,6 @@ export default function CategoryShowcase({ params }: { params: Promise<{ categor
                             )}
                           </div>
                           <h3 style={styles.cardTitle}>{item.title}</h3>
-                          
-                          {/* Micro Stats */}
-                          {(item.likes || item.views) && (
-                            <div style={styles.overlayStats}>
-                              {item.views && <span style={styles.statLabel}>👁️ {item.views}</span>}
-                              {item.likes && <span style={styles.statLabel}>❤️ {item.likes}</span>}
-                            </div>
-                          )}
                         </div>
 
                         {/* Base Indicator Icon */}
