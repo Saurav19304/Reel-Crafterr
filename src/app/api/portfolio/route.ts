@@ -17,45 +17,14 @@ export async function GET() {
   }
 }
 
-// POST new portfolio item
+// POST new portfolio item (expects JSON payload from client-side uploads)
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const title = formData.get("title") as string;
-    const category = formData.get("category") as string;
-    const instagramUrl = formData.get("instagramUrl") as string;
-    const file = formData.get("file") as File | null;
+    const { title, category, mediaUrl, type, instagramUrl } = await request.json();
 
-    if (!title || !category) {
-      return NextResponse.json({ error: "Title and category are required." }, { status: 400 });
+    if (!title || !category || !mediaUrl) {
+      return NextResponse.json({ error: "Title, category, and media URL are required." }, { status: 400 });
     }
-
-    if (file && file.size > 0) {
-      // Direct file upload is not supported in read-only Vercel serverless environment
-      return NextResponse.json({
-        error: "Direct file uploads are not supported on Vercel serverless hosting. Please enter an Instagram Post / Reel URL instead, which will be loaded dynamically in high-resolution."
-      }, { status: 400 });
-    }
-
-    if (!instagramUrl) {
-      return NextResponse.json({ error: "An Instagram Post or Reel URL is required." }, { status: 400 });
-    }
-
-    let mediaUrl = "";
-    const lowerCategory = category.toLowerCase();
-    
-    // Set default category image fallback
-    if (lowerCategory.includes("automotive")) {
-      mediaUrl = "/assets/images/car.png";
-    } else if (lowerCategory.includes("decor") || lowerCategory.includes("estate")) {
-      mediaUrl = "/assets/images/decor.png";
-    } else if (lowerCategory.includes("wedding")) {
-      mediaUrl = "/assets/images/wedding.png";
-    } else {
-      mediaUrl = "/assets/images/haldi.png";
-    }
-
-    const type = instagramUrl.includes("/reel/") ? "video" : "image";
 
     // Get current portfolio database
     let items = [];
@@ -77,9 +46,9 @@ export async function POST(request: NextRequest) {
       id: Date.now(),
       title,
       category,
-      instagramUrl,
+      instagramUrl: instagramUrl || "",
       mediaUrl,
-      type,
+      type: type || "image",
       likes: `${(Math.random() * 20 + 2).toFixed(1)}K`,
       views: `${(Math.random() * 300 + 40).toFixed(0)}K`
     };

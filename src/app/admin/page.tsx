@@ -48,13 +48,29 @@ export default function AdminPage() {
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState<boolean>(false);
 
-  // Check auth session on load
+  // Cloudinary credentials states
+  const [cloudName, setCloudName] = useState<string>('');
+  const [uploadPreset, setUploadPreset] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  // Check auth session and load credentials on mount
   useEffect(() => {
     const isAuth = localStorage.getItem('reel_crafterr_admin');
     if (isAuth === 'true') {
       setIsAuthenticated(true);
     }
+    const savedCloud = localStorage.getItem('reel_crafterr_cloud_name') || '';
+    const savedPreset = localStorage.getItem('reel_crafterr_upload_preset') || '';
+    setCloudName(savedCloud);
+    setUploadPreset(savedPreset);
   }, []);
+
+  const handleSaveCredentials = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('reel_crafterr_cloud_name', cloudName);
+    localStorage.setItem('reel_crafterr_upload_preset', uploadPreset);
+    alert('Cloudinary Credentials Saved Locally!');
+  };
 
   // Fetch portfolio list or bookings once authenticated and when tab changes
   useEffect(() => {
@@ -158,10 +174,17 @@ export default function AdminPage() {
     }
   };
 
+  const getYoutubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
     setSubmitSuccess('');
+    setUploadProgress(null);
 
     if (!title) {
       setSubmitError('Title is required.');
@@ -169,45 +192,113 @@ export default function AdminPage() {
     }
 
     if (!file && !instagramUrl) {
-      setSubmitError('You must upload a high-quality video/image file or provide an Instagram URL.');
+      setSubmitError('You must upload a high-quality video/image file or provide an Instagram/YouTube URL.');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('category', category);
-      formData.append('instagramUrl', instagramUrl);
+      let finalMediaUrl = '';
+      let finalType: 'image' | 'video' = 'image';
+      let finalEmbedUrl = instagramUrl || '';
+
       if (file) {
-        formData.append('file', file);
+        if (!cloudName || !uploadPreset) {
+          setSubmitError('Please enter and save your Cloudinary Cloud Name and Upload Preset in the credentials section first.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Upload directly from browser to Cloudinary and track progress
+        const cloudResult = await new Promise<{ secure_url: string; resource_type: string }>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/upload`, true);
+
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percent = Math.round((event.loaded / event.total) * 100);
+              setUploadProgress(percent);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status === 200) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              const errData = JSON.parse(xhr.responseText || '{}');
+              reject(new Error(errData.error?.message || 'Cloudinary upload failed.'));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error('Network error during Cloudinary upload.'));
+
+          const fd = new FormData();
+          fd.append('file', file);
+          fd.append('upload_preset', uploadPreset);
+          xhr.send(fd);
+        });
+
+        finalMediaUrl = cloudResult.secure_url;
+        finalType = cloudResult.resource_type === 'video' ? 'video' : 'image';
+        finalEmbedUrl = ''; // direct uploads don't use Instagram/YouTube embeds
+      } else if (instagramUrl) {
+        const ytId = getYoutubeId(instagramUrl);
+        if (ytId) {
+          finalType = 'video';
+          // Use YouTube high quality preview thumbnail as preview card
+          finalMediaUrl = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+          // Form embed link
+          finalEmbedUrl = `https://www.youtube.com/embed/${ytId}`;
+        } else {
+          // Instagram link: we can determine video/image type and use category thumbnail placeholder
+          const isReel = instagramUrl.includes('/reel/') || instagramUrl.includes('/p/');
+          finalType = isReel ? 'video' : 'image';
+          
+          if (category.toLowerCase().includes('automotive')) {
+            finalMediaUrl = '/assets/images/car.png';
+          } else if (category.toLowerCase().includes('decor') || category.toLowerCase().includes('estate')) {
+            finalMediaUrl = '/assets/images/decor.png';
+          } else if (category.toLowerCase().includes('wedding')) {
+            finalMediaUrl = '/assets/images/wedding.png';
+          } else {
+            finalMediaUrl = '/assets/images/haldi.png';
+          }
+          finalEmbedUrl = instagramUrl;
+        }
       }
 
+      // POST parameters directly as JSON
       const res = await fetch('/api/portfolio', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          category,
+          mediaUrl: finalMediaUrl,
+          type: finalType,
+          instagramUrl: finalEmbedUrl
+        }),
       });
 
       if (res.ok) {
-        setSubmitSuccess('Portfolio item uploaded successfully!');
+        setSubmitSuccess('Cinematic item uploaded successfully!');
         setTitle('');
         setInstagramUrl('');
         setFile(null);
-        // Reset file input
+        // Reset file input element
         const fileInput = document.getElementById('portfolio-file') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
-
-        // Reload items list
         fetchItems();
       } else {
         const data = await res.json();
         setSubmitError(data.error || 'Upload failed.');
       }
-    } catch (err) {
-      setSubmitError('Failed to communicate with upload server.');
+    } catch (err: any) {
+      setSubmitError(err.message || 'Failed to complete media upload.');
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -362,16 +453,16 @@ export default function AdminPage() {
               </div>
 
               <div style={styles.inputField}>
-                <label style={styles.label}>Instagram Post / Reel URL (Optional)</label>
+                <label style={styles.label}>Instagram Reel / YouTube URL (Optional)</label>
                 <input
                   type="text"
                   value={instagramUrl}
                   onChange={(e) => setInstagramUrl(e.target.value)}
-                  placeholder="e.g. https://www.instagram.com/reel/DaezrX4hU1I/"
+                  placeholder="e.g. https://www.instagram.com/reel/... or YouTube URL"
                   style={styles.textInput}
                 />
                 <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
-                  Providing an Instagram link dynamically renders the post widget in the lightbox.
+                  Providing an Instagram/YouTube link dynamically renders the post or loop video widget in the lightbox.
                 </span>
               </div>
 
@@ -385,9 +476,56 @@ export default function AdminPage() {
                   style={styles.fileInput}
                 />
                 <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
-                  Upload high-res files for direct local HTML5 hosting inside the gallery lightbox.
+                  Upload high-res raw files from your device. Direct cloud hosting bypasses size limits.
                 </span>
               </div>
+
+              {file && (
+                <div style={styles.credentialsBox}>
+                  <h4 style={styles.credentialsHeading}>Cloudinary Integration (Required for Files)</h4>
+                  <p style={{ fontSize: '11px', color: '#9da3ae', marginBottom: '12px', lineHeight: '1.4' }}>
+                    To host raw files (up to 100MB+) directly on your site, enter your Cloudinary credentials. Once saved, they persist in your local browser!
+                  </p>
+                  <div style={styles.inputField}>
+                    <label style={{ ...styles.label, color: '#e5b842', fontSize: '11px' }}>Cloud Name</label>
+                    <input
+                      type="text"
+                      value={cloudName}
+                      onChange={(e) => setCloudName(e.target.value)}
+                      placeholder="e.g. dkhz7z8z"
+                      required
+                      style={styles.textInput}
+                    />
+                  </div>
+                  <div style={{ ...styles.inputField, marginTop: '10px' }}>
+                    <label style={{ ...styles.label, color: '#e5b842', fontSize: '11px' }}>Upload Preset (Unsigned)</label>
+                    <input
+                      type="text"
+                      value={uploadPreset}
+                      onChange={(e) => setUploadPreset(e.target.value)}
+                      placeholder="e.g. reel_crafterr_preset"
+                      required
+                      style={styles.textInput}
+                    />
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={handleSaveCredentials} 
+                    style={styles.saveCredsBtn}
+                  >
+                    Save Credentials to Browser
+                  </button>
+                </div>
+              )}
+
+              {uploadProgress !== null && (
+                <div style={styles.progressBox}>
+                  <div style={styles.progressTrack}>
+                    <div style={{ ...styles.progressBar, width: `${uploadProgress}%` }} />
+                  </div>
+                  <span style={styles.progressLabel}>Uploading raw file to Cloud... {uploadProgress}%</span>
+                </div>
+              )}
 
               {submitError && (
                 <div style={{ color: '#ff4d4d', fontSize: '13px', fontWeight: '600' }}>
@@ -782,5 +920,54 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#e2e8f0',
     lineHeight: '1.6',
     margin: 0,
+  },
+  credentialsBox: {
+    padding: '16px',
+    borderRadius: '12px',
+    backgroundColor: 'rgba(229, 184, 66, 0.03)',
+    border: '1px dashed rgba(229, 184, 66, 0.2)',
+    marginTop: '12px',
+  },
+  credentialsHeading: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: '6px',
+  },
+  saveCredsBtn: {
+    width: '100%',
+    padding: '8px 12px',
+    borderRadius: '8px',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    color: '#ffffff',
+    fontSize: '11px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    marginTop: '12px',
+    transition: 'all 0.2s',
+  },
+  progressBox: {
+    marginTop: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  progressTrack: {
+    width: '100%',
+    height: '6px',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: '3px',
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#e5b842',
+    transition: 'width 0.1s ease-out',
+  },
+  progressLabel: {
+    fontSize: '11px',
+    color: '#e5b842',
+    fontWeight: '600',
   },
 };
