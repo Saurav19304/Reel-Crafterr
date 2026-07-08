@@ -90,10 +90,10 @@ export default function ServicesPage() {
   const [contact, setContact] = useState<string>('');
   const [brief, setBrief] = useState<string>('');
   const [date, setDate] = useState<string>('');
-  const [isCopied, setIsCopied] = useState<boolean>(false);
   
   const [formSubmitted, setFormSubmitted] = useState<boolean>(false);
-  const [generatedMessage, setGeneratedMessage] = useState<string>('');
+  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string>('');
 
   // Handle plan pre-selection and smooth scroll
   const handleSelectPlan = (planTitle: string) => {
@@ -104,32 +104,34 @@ export default function ServicesPage() {
     }
   };
 
-  const handleInquirySubmit = (e: React.FormEvent) => {
+  const handleInquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !contact) {
       alert('Please fill out your name and contact handle!');
       return;
     }
 
-    const message = `Hey Reel Crafterr team! 👋
-I would like to inquire about booking the "${selectedPlan}" package.
+    setIsSubmittingForm(true);
+    setSubmitError('');
 
-Details:
-- Name: ${name}
-- Contact / IG Handle: ${contact}
-- Target Date: ${date || 'TBD'}
-- Brief Info: ${brief || 'None provided'}
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, contact, plan: selectedPlan, date, brief }),
+      });
 
-Looking forward to capturing some amazing cinema!`;
-
-    setGeneratedMessage(message);
-    setFormSubmitted(true);
-  };
-
-  const handleCopyToClipboard = () => {
-    navigator.clipboard.writeText(generatedMessage);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+      if (res.ok) {
+        setFormSubmitted(true);
+      } else {
+        const data = await res.json();
+        setSubmitError(data.error || 'Failed to submit booking inquiry.');
+      }
+    } catch (err) {
+      setSubmitError('Failed to communicate with booking server.');
+    } finally {
+      setIsSubmittingForm(false);
+    }
   };
 
   return (
@@ -301,42 +303,39 @@ Looking forward to capturing some amazing cinema!`;
                       />
                     </div>
 
-                    <button type="submit" style={styles.submitBtn}>
-                      Generate Inquiry Draft
+                    {submitError && (
+                      <div style={{ color: '#ff4d4d', fontSize: '13px', fontWeight: '600' }}>
+                        ⚠️ {submitError}
+                      </div>
+                    )}
+
+                    <button type="submit" disabled={isSubmittingForm} style={styles.submitBtn}>
+                      {isSubmittingForm ? 'Submitting Inquiry...' : 'Submit Inquiry'}
                     </button>
                   </form>
                 ) : (
                   <div style={styles.inquirySuccess}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#e5b842', marginBottom: '12px' }}>
-                      Your Booking Message is Generated!
+                    <div style={styles.successIcon}>✓</div>
+                    <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#e5b842', marginBottom: '8px', textAlign: 'center' }}>
+                      Inquiry Received Successfully!
                     </h3>
-                    <p style={{ fontSize: '13px', color: '#9da3ae', marginBottom: '20px' }}>
-                      Copy the pre-structured message below and click the button to paste it directly into our Instagram DMs for confirmation.
+                    <p style={{ fontSize: '14px', color: '#e2e8f0', marginBottom: '24px', textAlign: 'center', lineHeight: '1.6', maxWidth: '500px' }}>
+                      Thank you, <strong style={{ color: '#ffffff' }}>{name}</strong>! Your booking inquiry for the <strong style={{ color: '#e5b842' }}>{selectedPlan}</strong> package has been saved. 
+                      We will review your project brief and contact you directly on <strong style={{ color: '#00f2fe' }}>{contact}</strong> shortly.
                     </p>
 
-                    <pre style={styles.messageBox}>{generatedMessage}</pre>
-
-                    <div style={styles.buttonGroup}>
-                      <button onClick={handleCopyToClipboard} style={styles.copyBtn}>
-                        {isCopied ? 'Copied! ✓' : 'Copy Message'}
-                      </button>
-                      
-                      <a
-                        href="https://www.instagram.com/reel_crafterr/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={styles.igDirectBtn}
-                      >
-                        Send on Instagram DMs
-                      </a>
-
-                      <button
-                        onClick={() => setFormSubmitted(false)}
-                        style={styles.editBtn}
-                      >
-                        Edit Details
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => {
+                        setFormSubmitted(false);
+                        setName('');
+                        setContact('');
+                        setBrief('');
+                        setDate('');
+                      }}
+                      style={styles.newBookingBtn}
+                    >
+                      Submit Another Inquiry
+                    </button>
                   </div>
                 )}
               </div>
@@ -608,49 +607,30 @@ const styles = {
     borderRadius: '16px',
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     border: '1px solid rgba(255, 255, 255, 0.06)',
-    color: '#e2e8f0',
-    fontFamily: 'monospace',
-    fontSize: '12px',
-    whiteSpace: 'pre-wrap' as const,
-    wordBreak: 'break-word' as const,
-    lineHeight: '1.6',
-    marginBottom: '24px',
   },
-  buttonGroup: {
+  successIcon: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(0, 230, 118, 0.1)',
+    border: '2px solid #00e676',
+    color: '#00e676',
     display: 'flex',
-    gap: '16px',
-    flexWrap: 'wrap' as const,
+    alignItems: 'center',
     justifyContent: 'center',
+    fontSize: '28px',
+    fontWeight: 'bold',
+    marginBottom: '20px',
   },
-  copyBtn: {
+  newBookingBtn: {
     padding: '12px 24px',
     borderRadius: '30px',
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
     color: '#ffffff',
     fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
-  },
-  igDirectBtn: {
-    padding: '12px 24px',
-    borderRadius: '30px',
-    backgroundColor: '#e5b842',
-    color: '#060608',
-    fontSize: '13px',
-    fontWeight: '700',
-    textDecoration: 'none',
-    cursor: 'pointer',
-    boxShadow: '0 4px 15px rgba(229, 184, 66, 0.25)',
-  },
-  editBtn: {
-    padding: '12px 24px',
-    borderRadius: '30px',
-    background: 'none',
-    border: 'none',
-    color: '#9da3ae',
-    fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
+    transition: 'all 0.2s',
   }
 };

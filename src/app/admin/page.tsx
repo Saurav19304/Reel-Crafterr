@@ -11,6 +11,16 @@ interface PortfolioItem {
   type: string;
 }
 
+interface BookingItem {
+  id: number;
+  name: string;
+  contact: string;
+  plan: string;
+  date: string;
+  brief: string;
+  createdAt: string;
+}
+
 export default function AdminPage() {
   // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -18,6 +28,9 @@ export default function AdminPage() {
   const [password, setPassword] = useState<string>('');
   const [authError, setAuthError] = useState<string>('');
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+
+  // Dashboard Tab state
+  const [activeTab, setActiveTab] = useState<'catalog' | 'bookings'>('catalog');
 
   // Portfolio management states
   const [items, setItems] = useState<PortfolioItem[]>([]);
@@ -31,6 +44,10 @@ export default function AdminPage() {
   const [submitSuccess, setSubmitSuccess] = useState<string>('');
   const [isLoadingItems, setIsLoadingItems] = useState<boolean>(false);
 
+  // Client Bookings states
+  const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState<boolean>(false);
+
   // Check auth session on load
   useEffect(() => {
     const isAuth = localStorage.getItem('reel_crafterr_admin');
@@ -39,12 +56,16 @@ export default function AdminPage() {
     }
   }, []);
 
-  // Fetch portfolio list once authenticated
+  // Fetch portfolio list or bookings once authenticated and when tab changes
   useEffect(() => {
     if (isAuthenticated) {
-      fetchItems();
+      if (activeTab === 'catalog') {
+        fetchItems();
+      } else {
+        fetchBookings();
+      }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, activeTab]);
 
   const fetchItems = async () => {
     setIsLoadingItems(true);
@@ -58,6 +79,42 @@ export default function AdminPage() {
       console.error('Failed to fetch items:', err);
     } finally {
       setIsLoadingItems(false);
+    }
+  };
+
+  const fetchBookings = async () => {
+    setIsLoadingBookings(true);
+    try {
+      const res = await fetch('/api/bookings');
+      if (res.ok) {
+        const data = await res.json();
+        setBookings(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch bookings:', err);
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  };
+
+  const handleDeleteBooking = async (id: number) => {
+    if (!confirm('Are you sure you want to archive/delete this booking inquiry?')) return;
+
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      if (res.ok) {
+        fetchBookings();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to archive booking.');
+      }
+    } catch (err) {
+      alert('Failed to connect to server.');
     }
   };
 
@@ -235,140 +292,232 @@ export default function AdminPage() {
           <h1 style={{ fontSize: '24px', fontWeight: '800' }}>
             REEL <span className="glow-text-gold">CRAFTERR</span> ADMIN
           </h1>
-          <p style={{ fontSize: '13px', color: '#9da3ae' }}>Manage your high-definition video reels and commercial uploads.</p>
+          <p style={{ fontSize: '13px', color: '#9da3ae' }}>Manage your high-definition video reels, commercial uploads, and client bookings.</p>
         </div>
         <button onClick={handleLogout} style={styles.logoutBtn}>
           Exit Panel
         </button>
       </header>
 
-      <div style={styles.dashboardGrid}>
-        {/* Upload Form Section */}
-        <div style={styles.formSection} className="glass-panel">
-          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#ffffff' }}>
-            Upload New Cinematic Work
-          </h2>
+      {/* Tab Selection */}
+      <div style={styles.tabContainer}>
+        <button
+          onClick={() => setActiveTab('catalog')}
+          style={{
+            ...styles.tabBtn,
+            borderBottom: activeTab === 'catalog' ? '2px solid #e5b842' : '2px solid transparent',
+            color: activeTab === 'catalog' ? '#e5b842' : '#9da3ae',
+            fontWeight: activeTab === 'catalog' ? '700' : '500',
+          }}
+        >
+          Manage Catalog
+        </button>
+        <button
+          onClick={() => setActiveTab('bookings')}
+          style={{
+            ...styles.tabBtn,
+            borderBottom: activeTab === 'bookings' ? '2px solid #e5b842' : '2px solid transparent',
+            color: activeTab === 'bookings' ? '#e5b842' : '#9da3ae',
+            fontWeight: activeTab === 'bookings' ? '700' : '500',
+          }}
+        >
+          Client Bookings ({bookings.length})
+        </button>
+      </div>
 
-          <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={styles.inputField}>
-              <label style={styles.label}>Project Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Mercedes AMG Rolling Shots"
-                required
-                style={styles.textInput}
-              />
-            </div>
+      {activeTab === 'catalog' ? (
+        <div style={styles.dashboardGrid}>
+          {/* Upload Form Section */}
+          <div style={styles.formSection} className="glass-panel">
+            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#ffffff' }}>
+              Upload New Cinematic Work
+            </h2>
 
-            <div style={styles.inputField}>
-              <label style={styles.label}>Pillar Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                style={styles.selectInput}
-              >
-                <option value="Automotive">Automotive</option>
-                <option value="Luxury Decor">Luxury Decor</option>
-                <option value="Brands">Brands</option>
-                <option value="Weddings">Weddings</option>
-                <option value="Parties">Parties</option>
-              </select>
-            </div>
+            <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={styles.inputField}>
+                <label style={styles.label}>Project Title</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Mercedes AMG Rolling Shots"
+                  required
+                  style={styles.textInput}
+                />
+              </div>
 
-            <div style={styles.inputField}>
-              <label style={styles.label}>Instagram Post / Reel URL (Optional)</label>
-              <input
-                type="text"
-                value={instagramUrl}
-                onChange={(e) => setInstagramUrl(e.target.value)}
-                placeholder="e.g. https://www.instagram.com/reel/DaezrX4hU1I/"
-                style={styles.textInput}
-              />
-              <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
-                Providing an Instagram link dynamically renders the post widget in the lightbox.
-              </span>
-            </div>
+              <div style={styles.inputField}>
+                <label style={styles.label}>Pillar Category</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  style={styles.selectInput}
+                >
+                  <option value="Automotive">Automotive</option>
+                  <option value="Luxury Decor">Luxury Decor</option>
+                  <option value="Brands">Brands</option>
+                  <option value="Weddings">Weddings</option>
+                  <option value="Parties">Parties</option>
+                </select>
+              </div>
 
-            <div style={styles.inputField}>
-              <label style={styles.label}>Upload High Quality Video/Image File (Optional)</label>
-              <input
-                type="file"
-                id="portfolio-file"
-                onChange={handleFileChange}
-                accept="video/*,image/*"
-                style={styles.fileInput}
-              />
-              <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
-                Upload high-res files for direct local HTML5 hosting inside the gallery lightbox.
-              </span>
-            </div>
+              <div style={styles.inputField}>
+                <label style={styles.label}>Instagram Post / Reel URL (Optional)</label>
+                <input
+                  type="text"
+                  value={instagramUrl}
+                  onChange={(e) => setInstagramUrl(e.target.value)}
+                  placeholder="e.g. https://www.instagram.com/reel/DaezrX4hU1I/"
+                  style={styles.textInput}
+                />
+                <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
+                  Providing an Instagram link dynamically renders the post widget in the lightbox.
+                </span>
+              </div>
 
-            {submitError && (
-              <div style={{ color: '#ff4d4d', fontSize: '13px', fontWeight: '600' }}>
-                ⚠️ {submitError}
+              <div style={styles.inputField}>
+                <label style={styles.label}>Upload High Quality Video/Image File (Optional)</label>
+                <input
+                  type="file"
+                  id="portfolio-file"
+                  onChange={handleFileChange}
+                  accept="video/*,image/*"
+                  style={styles.fileInput}
+                />
+                <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
+                  Upload high-res files for direct local HTML5 hosting inside the gallery lightbox.
+                </span>
+              </div>
+
+              {submitError && (
+                <div style={{ color: '#ff4d4d', fontSize: '13px', fontWeight: '600' }}>
+                  ⚠️ {submitError}
+                </div>
+              )}
+
+              {submitSuccess && (
+                <div style={{ color: '#00e676', fontSize: '13px', fontWeight: '600' }}>
+                  ✅ {submitSuccess}
+                </div>
+              )}
+
+              <button type="submit" disabled={isSubmitting} style={styles.submitButton}>
+                {isSubmitting ? 'Uploading Cinema...' : 'Upload Asset'}
+              </button>
+            </form>
+          </div>
+
+          {/* Existing Content Management Section */}
+          <div style={styles.listSection} className="glass-panel">
+            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#ffffff' }}>
+              Current Portfolio Catalog ({items.length})
+            </h2>
+
+            {isLoadingItems ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#9da3ae' }}>Loading catalog...</div>
+            ) : (
+              <div style={styles.catalogList}>
+                {items.map((item) => (
+                  <div key={item.id} style={styles.itemRow}>
+                    <div style={styles.itemThumbWrapper}>
+                      <img
+                        src={item.mediaUrl}
+                        alt={item.title}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff', marginBottom: '2px' }}>{item.title}</h4>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', color: '#e5b842', fontWeight: '600' }}>{item.category}</span>
+                        <span style={{ color: '#9da3ae', fontSize: '10px' }}>•</span>
+                        <span style={{ fontSize: '11px', color: '#9da3ae' }}>
+                          {item.instagramUrl ? 'Instagram Embed' : 'Local Host'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button onClick={() => handleDelete(item.id)} style={styles.deleteBtn}>
+                      Delete
+                    </button>
+                  </div>
+                ))}
+
+                {items.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#646a73' }}>
+                    No items inside database yet. Upload above!
+                  </div>
+                )}
               </div>
             )}
-
-            {submitSuccess && (
-              <div style={{ color: '#00e676', fontSize: '13px', fontWeight: '600' }}>
-                ✅ {submitSuccess}
-              </div>
-            )}
-
-            <button type="submit" disabled={isSubmitting} style={styles.submitButton}>
-              {isSubmitting ? 'Uploading Cinema...' : 'Upload Asset'}
-            </button>
-          </form>
+          </div>
         </div>
-
-        {/* Existing Content Management Section */}
-        <div style={styles.listSection} className="glass-panel">
-          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#ffffff' }}>
-            Current Portfolio Catalog ({items.length})
+      ) : (
+        /* Render Client Bookings Tab Panel */
+        <div style={styles.bookingsContainer} className="glass-panel">
+          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '24px', color: '#ffffff' }}>
+            Submitted Client Inquiries
           </h2>
-
-          {isLoadingItems ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: '#9da3ae' }}>Loading catalog...</div>
+          
+          {isLoadingBookings ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#9da3ae' }}>Loading bookings...</div>
           ) : (
-            <div style={styles.catalogList}>
-              {items.map((item) => (
-                <div key={item.id} style={styles.itemRow}>
-                  <div style={styles.itemThumbWrapper}>
-                    <img
-                      src={item.mediaUrl}
-                      alt={item.title}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
+            <div style={styles.bookingList}>
+              {bookings.map((booking) => (
+                <div key={booking.id} style={styles.bookingCard}>
+                  <div style={styles.bookingHeader}>
+                    <div>
+                      <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#ffffff', marginBottom: '4px' }}>{booking.name}</h3>
+                      <a
+                        href={booking.contact.startsWith('@') ? `https://instagram.com/${booking.contact.substring(1)}` : `tel:${booking.contact}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={styles.bookingContactLink}
+                      >
+                        📞 Contact: {booking.contact}
+                      </a>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleDeleteBooking(booking.id)}
+                      style={styles.archiveBtn}
+                    >
+                      Archive & Resolve
+                    </button>
                   </div>
 
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff', marginBottom: '2px' }}>{item.title}</h4>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', color: '#e5b842', fontWeight: '600' }}>{item.category}</span>
-                      <span style={{ color: '#9da3ae', fontSize: '10px' }}>•</span>
-                      <span style={{ fontSize: '11px', color: '#9da3ae' }}>
-                        {item.instagramUrl ? 'Instagram Embed' : 'Local Host'}
-                      </span>
+                  <div style={styles.bookingDetailsGrid}>
+                    <div style={styles.detailBox}>
+                      <span style={styles.detailLabel}>Plan Selected</span>
+                      <span style={styles.detailValue}>{booking.plan}</span>
+                    </div>
+                    <div style={styles.detailBox}>
+                      <span style={styles.detailLabel}>Target Date</span>
+                      <span style={styles.detailValue}>{booking.date}</span>
+                    </div>
+                    <div style={styles.detailBox}>
+                      <span style={styles.detailLabel}>Submitted At</span>
+                      <span style={{ ...styles.detailValue, fontSize: '11px', color: '#9da3ae' }}>{booking.createdAt}</span>
                     </div>
                   </div>
 
-                  <button onClick={() => handleDelete(item.id)} style={styles.deleteBtn}>
-                    Delete
-                  </button>
+                  <div style={styles.briefBox}>
+                    <span style={styles.detailLabel}>Project Brief / Requirements</span>
+                    <p style={styles.briefText}>{booking.brief}</p>
+                  </div>
                 </div>
               ))}
 
-              {items.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#646a73' }}>
-                  No items inside database yet. Upload above!
+              {bookings.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: '#646a73' }}>
+                  No active client bookings or inquiries found.
                 </div>
               )}
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -536,5 +685,102 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.2s',
+  },
+  tabContainer: {
+    display: 'flex',
+    gap: '24px',
+    marginBottom: '32px',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+    paddingBottom: '8px',
+  },
+  tabBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '15px',
+    padding: '8px 16px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  bookingsContainer: {
+    padding: '32px',
+    borderRadius: '24px',
+    backgroundColor: 'rgba(20, 20, 25, 0.3)',
+    border: '1px solid rgba(255, 255, 255, 0.06)',
+  },
+  bookingList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+  },
+  bookingCard: {
+    padding: '24px',
+    borderRadius: '16px',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  bookingHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+    paddingBottom: '12px',
+  },
+  bookingContactLink: {
+    fontSize: '13px',
+    color: '#00f2fe',
+    textDecoration: 'none',
+    fontWeight: '600',
+    transition: 'color 0.2s',
+  },
+  archiveBtn: {
+    padding: '8px 16px',
+    borderRadius: '20px',
+    backgroundColor: 'rgba(229, 184, 66, 0.1)',
+    border: '1px solid rgba(229, 184, 66, 0.2)',
+    color: '#e5b842',
+    fontSize: '11px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  bookingDetailsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+  },
+  detailBox: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  detailLabel: {
+    fontSize: '10px',
+    fontWeight: '700',
+    color: '#646a73',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  detailValue: {
+    fontSize: '13px',
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  briefBox: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    padding: '16px',
+    borderRadius: '12px',
+    border: '1px solid rgba(255, 255, 255, 0.02)',
+  },
+  briefText: {
+    fontSize: '13px',
+    color: '#e2e8f0',
+    lineHeight: '1.6',
+    margin: 0,
   },
 };
