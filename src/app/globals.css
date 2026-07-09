@@ -239,3 +239,44 @@ a {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Responsive Masonry Grid using CSS Columns */
+.masonry-grid {
+  column-count: 3;
+  column-gap: 24px;
+  width: 100%;
+}
+
+.masonry-card {
+  display: inline-block;
+  width: 100%;
+  break-inside: avoid;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+  .masonry-grid {
+    column-count: 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .masonry-grid {
+    column-count: 1;
+  }
+}
+
+/* Catalog Folder Accordion hover styling */
+.folder-header {
+  transition: all 0.2s ease-in-out;
+}
+
+.folder-header:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(229, 184, 66, 0.2) !important;
+}
+
+.folder-header:active {
+  transform: scale(0.995);
+}
+

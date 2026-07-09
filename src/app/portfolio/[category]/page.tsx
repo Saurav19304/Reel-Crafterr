@@ -57,7 +57,7 @@ export default function CategoryShowcase({ params }: { params: Promise<{ categor
   useEffect(() => {
     async function loadItems() {
       try {
-        const res = await fetch('/api/portfolio');
+        const res = await fetch(`/api/portfolio?t=${Date.now()}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           // Filter dynamically by category mapping
@@ -121,7 +121,7 @@ export default function CategoryShowcase({ params }: { params: Promise<{ categor
                 <div style={styles.spinner} />
               </div>
             ) : items.length > 0 ? (
-              <div style={styles.grid}>
+              <div className="masonry-grid">
                 {items.map((item, index) => {
                   const isHovered = hoveredCard === item.id;
                   
@@ -131,11 +131,8 @@ export default function CategoryShowcase({ params }: { params: Promise<{ categor
                       onClick={() => setSelectedItem(item)}
                       onMouseEnter={() => setHoveredCard(item.id)}
                       onMouseLeave={() => setHoveredCard(null)}
-                      style={{
-                        ...styles.card,
-                        gridColumn: index % 5 === 2 ? 'span 2' : 'span 1', // subtle asymmetric variety
-                      }}
-                      className="glass-panel"
+                      className="glass-panel masonry-card"
+                      style={styles.card}
                     >
                       <div style={styles.imageWrapper}>
                         <img
@@ -321,12 +318,7 @@ const styles = {
     color: '#9da3ae',
     lineHeight: '1.6',
   },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-    gap: '24px',
-    gridAutoFlow: 'dense',
-  },
+  grid: {},
   card: {
     cursor: 'pointer',
     borderRadius: '20px',
@@ -334,18 +326,16 @@ const styles = {
     border: '1px solid rgba(255, 255, 255, 0.04)',
     background: 'rgba(20, 20, 25, 0.4)',
     position: 'relative' as const,
-    aspectRatio: '9/14',
   },
   imageWrapper: {
     position: 'relative' as const,
     width: '100%',
-    height: '100%',
     overflow: 'hidden',
   },
   coverImage: {
     width: '100%',
-    height: '100%',
-    objectFit: 'cover' as const,
+    height: 'auto',
+    display: 'block',
     transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
   },
   cardOverlay: {

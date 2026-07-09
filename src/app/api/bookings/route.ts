@@ -7,15 +7,22 @@ export async function GET() {
   try {
     const res = await fetch(DB_URL, { cache: "no-store" });
     if (!res.ok) {
-      return NextResponse.json([], { status: 200 });
+      return NextResponse.json([], { 
+        status: 200,
+        headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" }
+      });
     }
     const items = await res.json();
     // Sort by ID descending (newest first)
     const sorted = Array.isArray(items) ? items.sort((a: any, b: any) => b.id - a.id) : [];
-    return NextResponse.json(sorted);
+    return NextResponse.json(sorted, {
+      headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" }
+    });
   } catch (err) {
     console.error("Failed to read extendsclass bookings:", err);
-    return NextResponse.json([]);
+    return NextResponse.json([], {
+      headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" }
+    });
   }
 }
 

@@ -1,20 +1,81 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 const CATEGORIES = [
-  { id: 'automotive', title: 'Automotive Showcases', cover: '/assets/images/car.png', count: '3 Shoots' },
-  { id: 'luxury-decor', title: 'Luxury Decor & Real Estate', cover: '/assets/images/decor.png', count: '2 Shoots' },
-  { id: 'brands', title: 'Brand & Commercial Reels', cover: '/assets/images/haldi.png', count: '2 Shoots' },
-  { id: 'weddings', title: 'Premium Weddings', cover: '/assets/images/wedding.png', count: '2 Shoots' },
+  { id: 'automotive', title: 'Automotive Showcases', cover: '/assets/images/car.png', count: '0 Shoots' },
+  { id: 'luxury-decor', title: 'Luxury Decor & Real Estate', cover: '/assets/images/decor.png', count: '0 Shoots' },
+  { id: 'brands', title: 'Brand & Commercial Reels', cover: '/assets/images/haldi.png', count: '0 Shoots' },
+  { id: 'weddings', title: 'Premium Weddings', cover: '/assets/images/wedding.png', count: '0 Shoots' },
   { id: 'parties', title: 'Parties (Birthday & Baby Shower)', cover: '/assets/images/gimbal-hero.png', count: '0 Shoots' }
 ];
 
+const matchCategory = (itemCat: string, catId: string) => {
+  const normalizedItem = itemCat.toLowerCase();
+  if (catId === 'luxury-decor') {
+    return normalizedItem.includes('decor') || normalizedItem.includes('estate') || normalizedItem.includes('luxury');
+  }
+  if (catId === 'weddings') {
+    return normalizedItem.includes('wedding');
+  }
+  if (catId === 'parties') {
+    return normalizedItem.includes('party') || normalizedItem.includes('birthday') || normalizedItem.includes('shower') || normalizedItem.includes('baby');
+  }
+  return normalizedItem === catId || normalizedItem.includes(catId);
+};
+
 export default function PortfolioPage() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [categories, setCategories] = useState(CATEGORIES);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDynamicCategories() {
+      try {
+        const [itemsRes, coversRes] = await Promise.all([
+          fetch(`/api/portfolio?t=${Date.now()}`, { cache: 'no-store' }),
+          fetch(`/api/portfolio?covers=true&t=${Date.now()}`, { cache: 'no-store' })
+        ]);
+
+        if (itemsRes.ok && coversRes.ok) {
+          const data = await itemsRes.json();
+          const coversData = await coversRes.json();
+
+          if (Array.isArray(data)) {
+            const updated = CATEGORIES.map((cat) => {
+              const customCover = Array.isArray(coversData)
+                ? coversData.find((c: any) => c.category === cat.id)
+                : null;
+
+              const catItems = data.filter((item: any) => matchCategory(item.category, cat.id));
+              let dynamicCover = customCover ? customCover.mediaUrl : cat.cover;
+
+              if (!customCover && catItems.length > 0) {
+                const latestItem = catItems[catItems.length - 1];
+                if (latestItem.mediaUrl) {
+                  dynamicCover = latestItem.mediaUrl;
+                }
+              }
+              return {
+                ...cat,
+                count: `${catItems.length} Shoot${catItems.length === 1 ? '' : 's'}`,
+                cover: dynamicCover,
+              };
+            });
+            setCategories(updated);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load dynamic portfolio stats:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadDynamicCategories();
+  }, []);
 
   return (
     <>
@@ -37,7 +98,7 @@ export default function PortfolioPage() {
 
             {/* Asymmetric Gallery Grid */}
             <div style={styles.grid}>
-              {CATEGORIES.map((cat, index) => {
+              {categories.map((cat, index) => {
                 const isHovered = hoveredCard === cat.id;
                 // Add masonry style variations
                 const gridSpan = index % 3 === 0 ? 'span 2' : 'span 1';
@@ -72,7 +133,7 @@ export default function PortfolioPage() {
                         <div style={styles.overlayContent}>
                           <h3 style={styles.overlayTitle}>{cat.title}</h3>
                           <div style={styles.activeLine} />
-                          <span style={styles.overlayCount}>Explore Collection →</span>
+                          <span style={styles.overlayCount}>{cat.count} • Explore →</span>
                         </div>
                       </div>
 

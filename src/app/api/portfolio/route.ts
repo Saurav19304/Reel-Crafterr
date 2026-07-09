@@ -2,25 +2,102 @@ import { NextRequest, NextResponse } from "next/server";
 
 const DB_URL = "https://extendsclass.com/api/json-storage/bin/fdfccdb";
 
-// GET all portfolio items
-export async function GET() {
+// GET all portfolio items (or category covers)
+export async function GET(request: NextRequest) {
   try {
     const res = await fetch(DB_URL, { cache: "no-store" });
     if (!res.ok) {
-      return NextResponse.json([], { status: 200 });
+      return NextResponse.json([], { 
+        status: 200,
+        headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" }
+      });
     }
     const items = await res.json();
-    return NextResponse.json(Array.isArray(items) ? items : []);
+    if (!Array.isArray(items)) {
+      return NextResponse.json([], {
+        headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" }
+      });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const getCovers = searchParams.get("covers") === "true";
+
+    if (getCovers) {
+      const covers = items.filter((item: any) => item.isCover);
+      return NextResponse.json(covers, {
+        headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" }
+      });
+    } else {
+      const portfolioItems = items.filter((item: any) => !item.isCover);
+      return NextResponse.json(portfolioItems, {
+        headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" }
+      });
+    }
   } catch (err) {
     console.error("Failed to read extendsclass portfolio:", err);
-    return NextResponse.json([]);
+    return NextResponse.json([], {
+      headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" }
+    });
   }
 }
 
 // POST new portfolio item (expects JSON payload from client-side uploads)
 export async function POST(request: NextRequest) {
   try {
-    const { title, category, mediaUrl, type, instagramUrl } = await request.json();
+    const body = await request.json();
+
+    // Check if updating category cover page
+    if (body.isCover) {
+      const { category, mediaUrl } = body;
+      if (!category || !mediaUrl) {
+        return NextResponse.json({ error: "Category and media URL are required for covers." }, { status: 400 });
+      }
+
+      let items = [];
+      try {
+        const getRes = await fetch(DB_URL, { cache: "no-store" });
+        if (getRes.ok) {
+          items = await getRes.json();
+        }
+      } catch (e) {
+        console.warn("Could not read database for covers, starting fresh");
+      }
+
+      if (!Array.isArray(items)) {
+        items = [];
+      }
+
+      const existingCoverIndex = items.findIndex(
+        (item: any) => item.isCover && item.category.toLowerCase() === category.toLowerCase()
+      );
+
+      const coverItem = {
+        id: `cover_${category.toLowerCase()}`,
+        isCover: true,
+        category: category.toLowerCase(),
+        mediaUrl
+      };
+
+      if (existingCoverIndex > -1) {
+        items[existingCoverIndex] = coverItem;
+      } else {
+        items.push(coverItem);
+      }
+
+      const putRes = await fetch(DB_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(items)
+      });
+
+      if (!putRes.ok) {
+        throw new Error("Failed to write cover to database bin");
+      }
+
+      return NextResponse.json({ success: true, cover: coverItem });
+    }
+
+    const { title, category, mediaUrl, type, instagramUrl } = body;
 
     if (!title || !category || !mediaUrl) {
       return NextResponse.json({ error: "Title, category, and media URL are required." }, { status: 400 });
@@ -92,7 +169,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "No portfolio database found." }, { status: 404 });
     }
 
-    const filtered = items.filter((item: any) => item.id !== Number(id));
+    const filtered = items.filter((item: any) => String(item.id) !== String(id));
 
     // Save updated portfolio
     const putRes = await fetch(DB_URL, {

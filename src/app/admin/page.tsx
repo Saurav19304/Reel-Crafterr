@@ -34,6 +34,10 @@ export default function AdminPage() {
 
   // Portfolio management states
   const [items, setItems] = useState<PortfolioItem[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [uploadMode, setUploadMode] = useState<'asset' | 'cover'>('asset');
+  const [customCovers, setCustomCovers] = useState<any[]>([]);
+  const [coversFolderOpen, setCoversFolderOpen] = useState<boolean>(false);
   const [title, setTitle] = useState<string>('');
   const [category, setCategory] = useState<string>('Automotive');
   const [instagramUrl, setInstagramUrl] = useState<string>('');
@@ -43,6 +47,13 @@ export default function AdminPage() {
   const [submitError, setSubmitError] = useState<string>('');
   const [submitSuccess, setSubmitSuccess] = useState<string>('');
   const [isLoadingItems, setIsLoadingItems] = useState<boolean>(false);
+
+  const toggleCategory = (catName: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [catName]: !prev[catName]
+    }));
+  };
 
   // Client Bookings states
   const [bookings, setBookings] = useState<BookingItem[]>([]);
@@ -77,6 +88,7 @@ export default function AdminPage() {
     if (isAuthenticated) {
       if (activeTab === 'catalog') {
         fetchItems();
+        fetchCovers();
       } else {
         fetchBookings();
       }
@@ -86,7 +98,7 @@ export default function AdminPage() {
   const fetchItems = async () => {
     setIsLoadingItems(true);
     try {
-      const res = await fetch('/api/portfolio');
+      const res = await fetch(`/api/portfolio?t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setItems(data);
@@ -98,10 +110,43 @@ export default function AdminPage() {
     }
   };
 
+  const fetchCovers = async () => {
+    try {
+      const res = await fetch(`/api/portfolio?covers=true&t=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setCustomCovers(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch covers:', err);
+    }
+  };
+
+  const handleDeleteCover = async (id: any) => {
+    if (!confirm('Are you sure you want to reset this cover page to its default image?')) return;
+
+    try {
+      const res = await fetch('/api/portfolio', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      if (res.ok) {
+        fetchCovers();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Reset failed.');
+      }
+    } catch (err) {
+      alert('Failed to connect to server.');
+    }
+  };
+
   const fetchBookings = async () => {
     setIsLoadingBookings(true);
     try {
-      const res = await fetch('/api/bookings');
+      const res = await fetch(`/api/bookings?t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setBookings(data);
@@ -302,6 +347,92 @@ export default function AdminPage() {
     }
   };
 
+  const handleUpdateCover = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError('');
+    setSubmitSuccess('');
+    setUploadProgress(null);
+
+    if (!file && !instagramUrl) {
+      setSubmitError('Please upload an image file or provide a direct image URL.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      let finalMediaUrl = instagramUrl || '';
+
+      if (file) {
+        if (!cloudName || !uploadPreset) {
+          setSubmitError('Please enter and save your Cloudinary Cloud Name and Upload Preset first.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Upload directly from browser to Cloudinary and track progress
+        const cloudResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/upload`, true);
+
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percent = Math.round((event.loaded / event.total) * 100);
+              setUploadProgress(percent);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status === 200) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              const errData = JSON.parse(xhr.responseText || '{}');
+              reject(new Error(errData.error?.message || 'Cloudinary upload failed.'));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error('Network error during Cloudinary upload.'));
+
+          const fd = new FormData();
+          fd.append('file', file);
+          fd.append('upload_preset', uploadPreset);
+          xhr.send(fd);
+        });
+
+        finalMediaUrl = cloudResult.secure_url;
+      }
+
+      // POST cover parameter to API
+      const res = await fetch('/api/portfolio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isCover: true,
+          category: category.toLowerCase(),
+          mediaUrl: finalMediaUrl
+        }),
+      });
+
+      if (res.ok) {
+        setSubmitSuccess(`Cover for "${category}" updated successfully!`);
+        setInstagramUrl('');
+        setFile(null);
+        // Reset file input element
+        const fileInput = document.getElementById('portfolio-file') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+        fetchCovers();
+      } else {
+        const data = await res.json();
+        setSubmitError(data.error || 'Cover update failed.');
+      }
+    } catch (err: any) {
+      setSubmitError(err.message || 'Failed to complete cover upload.');
+    } finally {
+      setIsSubmitting(false);
+      setUploadProgress(null);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this portfolio item?')) return;
 
@@ -375,6 +506,16 @@ export default function AdminPage() {
     );
   }
 
+  // Grouping items by category for the accordion view
+  const groupedItems = items.reduce((acc, item) => {
+    const cat = item.category || 'Uncategorized';
+    if (!acc[cat]) {
+      acc[cat] = [];
+    }
+    acc[cat].push(item);
+    return acc;
+  }, {} as Record<string, PortfolioItem[]>);
+
   // Render Main Dashboard
   return (
     <div style={styles.dashboardContainer}>
@@ -420,129 +561,273 @@ export default function AdminPage() {
         <div style={styles.dashboardGrid}>
           {/* Upload Form Section */}
           <div style={styles.formSection} className="glass-panel">
-            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#ffffff' }}>
-              Upload New Cinematic Work
-            </h2>
-
-            <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={styles.inputField}>
-                <label style={styles.label}>Project Title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Mercedes AMG Rolling Shots"
-                  required
-                  style={styles.textInput}
-                />
-              </div>
-
-              <div style={styles.inputField}>
-                <label style={styles.label}>Pillar Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  style={styles.selectInput}
-                >
-                  <option value="Automotive">Automotive</option>
-                  <option value="Luxury Decor">Luxury Decor</option>
-                  <option value="Brands">Brands</option>
-                  <option value="Weddings">Weddings</option>
-                  <option value="Parties">Parties</option>
-                </select>
-              </div>
-
-              <div style={styles.inputField}>
-                <label style={styles.label}>Instagram Reel / YouTube URL (Optional)</label>
-                <input
-                  type="text"
-                  value={instagramUrl}
-                  onChange={(e) => setInstagramUrl(e.target.value)}
-                  placeholder="e.g. https://www.instagram.com/reel/... or YouTube URL"
-                  style={styles.textInput}
-                />
-                <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
-                  Providing an Instagram/YouTube link dynamically renders the post or loop video widget in the lightbox.
-                </span>
-              </div>
-
-              <div style={styles.inputField}>
-                <label style={styles.label}>Upload High Quality Video/Image File (Optional)</label>
-                <input
-                  type="file"
-                  id="portfolio-file"
-                  onChange={handleFileChange}
-                  accept="video/*,image/*"
-                  style={styles.fileInput}
-                />
-                <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
-                  Upload high-res raw files from your device. Direct cloud hosting bypasses size limits.
-                </span>
-              </div>
-
-              {file && (
-                <div style={styles.credentialsBox}>
-                  <h4 style={styles.credentialsHeading}>Cloudinary Integration (Required for Files)</h4>
-                  <p style={{ fontSize: '11px', color: '#9da3ae', marginBottom: '12px', lineHeight: '1.4' }}>
-                    To host raw files (up to 100MB+) directly on your site, enter your Cloudinary credentials. Once saved, they persist in your local browser!
-                  </p>
-                  <div style={styles.inputField}>
-                    <label style={{ ...styles.label, color: '#e5b842', fontSize: '11px' }}>Cloud Name</label>
-                    <input
-                      type="text"
-                      value={cloudName}
-                      onChange={(e) => setCloudName(e.target.value)}
-                      placeholder="e.g. dkhz7z8z"
-                      required
-                      style={styles.textInput}
-                    />
-                  </div>
-                  <div style={{ ...styles.inputField, marginTop: '10px' }}>
-                    <label style={{ ...styles.label, color: '#e5b842', fontSize: '11px' }}>Upload Preset (Unsigned)</label>
-                    <input
-                      type="text"
-                      value={uploadPreset}
-                      onChange={(e) => setUploadPreset(e.target.value)}
-                      placeholder="e.g. reel_crafterr_preset"
-                      required
-                      style={styles.textInput}
-                    />
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={handleSaveCredentials} 
-                    style={styles.saveCredsBtn}
-                  >
-                    Save Credentials to Browser
-                  </button>
-                </div>
-              )}
-
-              {uploadProgress !== null && (
-                <div style={styles.progressBox}>
-                  <div style={styles.progressTrack}>
-                    <div style={{ ...styles.progressBar, width: `${uploadProgress}%` }} />
-                  </div>
-                  <span style={styles.progressLabel}>Uploading raw file to Cloud... {uploadProgress}%</span>
-                </div>
-              )}
-
-              {submitError && (
-                <div style={{ color: '#ff4d4d', fontSize: '13px', fontWeight: '600' }}>
-                  ⚠️ {submitError}
-                </div>
-              )}
-
-              {submitSuccess && (
-                <div style={{ color: '#00e676', fontSize: '13px', fontWeight: '600' }}>
-                  ✅ {submitSuccess}
-                </div>
-              )}
-
-              <button type="submit" disabled={isSubmitting} style={styles.submitButton}>
-                {isSubmitting ? 'Uploading Cinema...' : 'Upload Asset'}
+            <div style={styles.subTabContainer}>
+              <button
+                type="button"
+                onClick={() => {
+                  setUploadMode('asset');
+                  setSubmitError('');
+                  setSubmitSuccess('');
+                }}
+                style={{
+                  ...styles.subTabBtn,
+                  borderBottom: uploadMode === 'asset' ? '2px solid #e5b842' : '2px solid transparent',
+                  color: uploadMode === 'asset' ? '#e5b842' : '#9da3ae',
+                }}
+              >
+                Upload Work
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => {
+                  setUploadMode('cover');
+                  setSubmitError('');
+                  setSubmitSuccess('');
+                }}
+                style={{
+                  ...styles.subTabBtn,
+                  borderBottom: uploadMode === 'cover' ? '2px solid #e5b842' : '2px solid transparent',
+                  color: uploadMode === 'cover' ? '#e5b842' : '#9da3ae',
+                }}
+              >
+                Edit Covers
+              </button>
+            </div>
+
+            {uploadMode === 'asset' ? (
+              <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#ffffff' }}>
+                  Upload New Cinematic Work
+                </h2>
+
+                <div style={styles.inputField}>
+                  <label style={styles.label}>Project Title</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Mercedes AMG Rolling Shots"
+                    required
+                    style={styles.textInput}
+                  />
+                </div>
+
+                <div style={styles.inputField}>
+                  <label style={styles.label}>Pillar Category</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    style={styles.selectInput}
+                  >
+                    <option value="Automotive">Automotive</option>
+                    <option value="Luxury Decor">Luxury Decor</option>
+                    <option value="Brands">Brands</option>
+                    <option value="Weddings">Weddings</option>
+                    <option value="Parties">Parties</option>
+                  </select>
+                </div>
+
+                <div style={styles.inputField}>
+                  <label style={styles.label}>Instagram Reel / YouTube URL (Optional)</label>
+                  <input
+                    type="text"
+                    value={instagramUrl}
+                    onChange={(e) => setInstagramUrl(e.target.value)}
+                    placeholder="e.g. https://www.instagram.com/reel/... or YouTube URL"
+                    style={styles.textInput}
+                  />
+                  <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
+                    Providing an Instagram/YouTube link dynamically renders the post or loop video widget in the lightbox.
+                  </span>
+                </div>
+
+                <div style={styles.inputField}>
+                  <label style={styles.label}>Upload High Quality Video/Image File (Optional)</label>
+                  <input
+                    type="file"
+                    id="portfolio-file"
+                    onChange={handleFileChange}
+                    accept="video/*,image/*"
+                    style={styles.fileInput}
+                  />
+                  <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
+                    Upload high-res raw files from your device. Direct cloud hosting bypasses size limits.
+                  </span>
+                </div>
+
+                {file && (
+                  <div style={styles.credentialsBox}>
+                    <h4 style={styles.credentialsHeading}>Cloudinary Integration (Required for Files)</h4>
+                    <p style={{ fontSize: '11px', color: '#9da3ae', marginBottom: '12px', lineHeight: '1.4' }}>
+                      To host raw files (up to 100MB+) directly on your site, enter your Cloudinary credentials. Once saved, they persist in your local browser!
+                    </p>
+                    <div style={styles.inputField}>
+                      <label style={{ ...styles.label, color: '#e5b842', fontSize: '11px' }}>Cloud Name</label>
+                      <input
+                        type="text"
+                        value={cloudName}
+                        onChange={(e) => setCloudName(e.target.value)}
+                        placeholder="e.g. dkhz7z8z"
+                        required
+                        style={styles.textInput}
+                      />
+                    </div>
+                    <div style={{ ...styles.inputField, marginTop: '10px' }}>
+                      <label style={{ ...styles.label, color: '#e5b842', fontSize: '11px' }}>Upload Preset (Unsigned)</label>
+                      <input
+                        type="text"
+                        value={uploadPreset}
+                        onChange={(e) => setUploadPreset(e.target.value)}
+                        placeholder="e.g. reel_crafterr_preset"
+                        required
+                        style={styles.textInput}
+                      />
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={handleSaveCredentials} 
+                      style={styles.saveCredsBtn}
+                    >
+                      Save Credentials to Browser
+                    </button>
+                  </div>
+                )}
+
+                {uploadProgress !== null && (
+                  <div style={styles.progressBox}>
+                    <div style={styles.progressTrack}>
+                      <div style={{ ...styles.progressBar, width: `${uploadProgress}%` }} />
+                    </div>
+                    <span style={styles.progressLabel}>Uploading raw file to Cloud... {uploadProgress}%</span>
+                  </div>
+                )}
+
+                {submitError && (
+                  <div style={{ color: '#ff4d4d', fontSize: '13px', fontWeight: '600' }}>
+                    ⚠️ {submitError}
+                  </div>
+                )}
+
+                {submitSuccess && (
+                  <div style={{ color: '#00e676', fontSize: '13px', fontWeight: '600' }}>
+                    ✅ {submitSuccess}
+                  </div>
+                )}
+
+                <button type="submit" disabled={isSubmitting} style={styles.submitButton}>
+                  {isSubmitting ? 'Uploading Cinema...' : 'Upload Asset'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleUpdateCover} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#ffffff' }}>
+                  Update Folder Cover Image
+                </h2>
+
+                <div style={styles.inputField}>
+                  <label style={styles.label}>Select Category Folder</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    style={styles.selectInput}
+                  >
+                    <option value="Automotive">Automotive</option>
+                    <option value="Luxury Decor">Luxury Decor</option>
+                    <option value="Brands">Brands</option>
+                    <option value="Weddings">Weddings</option>
+                    <option value="Parties">Parties</option>
+                  </select>
+                </div>
+
+                <div style={styles.inputField}>
+                  <label style={styles.label}>Cover Image URL (Direct image link)</label>
+                  <input
+                    type="text"
+                    value={instagramUrl}
+                    onChange={(e) => setInstagramUrl(e.target.value)}
+                    placeholder="e.g. https://example.com/cover.jpg"
+                    style={styles.textInput}
+                  />
+                </div>
+
+                <div style={styles.inputField}>
+                  <label style={styles.label}>Or Upload Cover Image File</label>
+                  <input
+                    type="file"
+                    id="portfolio-file"
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    style={styles.fileInput}
+                  />
+                  <span style={{ fontSize: '11px', color: '#9da3ae', marginTop: '4px' }}>
+                    Upload a custom JPEG/PNG to represent this category folder.
+                  </span>
+                </div>
+
+                {file && (
+                  <div style={styles.credentialsBox}>
+                    <h4 style={styles.credentialsHeading}>Cloudinary Integration (Required for Files)</h4>
+                    <p style={{ fontSize: '11px', color: '#9da3ae', marginBottom: '12px', lineHeight: '1.4' }}>
+                      To upload custom cover images directly, save your Cloudinary settings below.
+                    </p>
+                    <div style={styles.inputField}>
+                      <label style={{ ...styles.label, color: '#e5b842', fontSize: '11px' }}>Cloud Name</label>
+                      <input
+                        type="text"
+                        value={cloudName}
+                        onChange={(e) => setCloudName(e.target.value)}
+                        placeholder="e.g. dkhz7z8z"
+                        required
+                        style={styles.textInput}
+                      />
+                    </div>
+                    <div style={{ ...styles.inputField, marginTop: '10px' }}>
+                      <label style={{ ...styles.label, color: '#e5b842', fontSize: '11px' }}>Upload Preset (Unsigned)</label>
+                      <input
+                        type="text"
+                        value={uploadPreset}
+                        onChange={(e) => setUploadPreset(e.target.value)}
+                        placeholder="e.g. reel_crafterr_preset"
+                        required
+                        style={styles.textInput}
+                      />
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={handleSaveCredentials} 
+                      style={styles.saveCredsBtn}
+                    >
+                      Save Credentials to Browser
+                    </button>
+                  </div>
+                )}
+
+                {uploadProgress !== null && (
+                  <div style={styles.progressBox}>
+                    <div style={styles.progressTrack}>
+                      <div style={{ ...styles.progressBar, width: `${uploadProgress}%` }} />
+                    </div>
+                    <span style={styles.progressLabel}>Uploading cover to Cloud... {uploadProgress}%</span>
+                  </div>
+                )}
+
+                {submitError && (
+                  <div style={{ color: '#ff4d4d', fontSize: '13px', fontWeight: '600' }}>
+                    ⚠️ {submitError}
+                  </div>
+                )}
+
+                {submitSuccess && (
+                  <div style={{ color: '#00e676', fontSize: '13px', fontWeight: '600' }}>
+                    ✅ {submitSuccess}
+                  </div>
+                )}
+
+                <button type="submit" disabled={isSubmitting} style={styles.submitButton}>
+                  {isSubmitting ? 'Uploading Cover...' : 'Update Folder Cover'}
+                </button>
+              </form>
+            )}
           </div>
 
           {/* Existing Content Management Section */}
@@ -555,32 +840,187 @@ export default function AdminPage() {
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#9da3ae' }}>Loading catalog...</div>
             ) : (
               <div style={styles.catalogList}>
-                {items.map((item) => (
-                  <div key={item.id} style={styles.itemRow}>
-                    <div style={styles.itemThumbWrapper}>
-                      <img
-                        src={item.mediaUrl}
-                        alt={item.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
+                {/* Folder Covers Accordion */}
+                <div style={styles.folderContainer}>
+                  <div
+                    onClick={() => setCoversFolderOpen(!coversFolderOpen)}
+                    className="folder-header"
+                    style={styles.folderHeader}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {/* Photo / Gallery Icon */}
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#e5b842"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                      <span style={styles.folderTitle}>Folder Cover Pages</span>
+                      <span style={styles.folderBadge}>
+                        {customCovers.length} custom
+                      </span>
                     </div>
-
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff', marginBottom: '2px' }}>{item.title}</h4>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '11px', color: '#e5b842', fontWeight: '600' }}>{item.category}</span>
-                        <span style={{ color: '#9da3ae', fontSize: '10px' }}>•</span>
-                        <span style={{ fontSize: '11px', color: '#9da3ae' }}>
-                          {item.instagramUrl ? 'Instagram Embed' : 'Local Host'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button onClick={() => handleDelete(item.id)} style={styles.deleteBtn}>
-                      Delete
-                    </button>
+                    
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#9da3ae"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{
+                        transform: coversFolderOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
                   </div>
-                ))}
+
+                  {coversFolderOpen && (
+                    <div style={styles.folderContent}>
+                      {['automotive', 'luxury-decor', 'brands', 'weddings', 'parties'].map((catId) => {
+                        const customCover = customCovers.find(c => c.category === catId);
+                        const defaultCovers: Record<string, string> = {
+                          automotive: '/assets/images/car.png',
+                          'luxury-decor': '/assets/images/decor.png',
+                          brands: '/assets/images/haldi.png',
+                          weddings: '/assets/images/wedding.png',
+                          parties: '/assets/images/gimbal-hero.png'
+                        };
+                        const catTitles: Record<string, string> = {
+                          automotive: 'Automotive Showcases',
+                          'luxury-decor': 'Luxury Decor & Real Estate',
+                          brands: 'Brand & Commercial Reels',
+                          weddings: 'Premium Weddings',
+                          parties: 'Parties (Birthday & Baby Shower)'
+                        };
+                        const currentCoverUrl = customCover ? customCover.mediaUrl : defaultCovers[catId];
+
+                        return (
+                          <div key={catId} style={styles.itemRow}>
+                            <div style={styles.itemThumbWrapper}>
+                              <img
+                                src={currentCoverUrl}
+                                alt={catTitles[catId]}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            </div>
+
+                            <div style={{ flex: 1 }}>
+                              <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff', marginBottom: '2px' }}>
+                                {catTitles[catId]}
+                              </h4>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '11px', color: customCover ? '#e5b842' : '#9da3ae', fontWeight: '600' }}>
+                                  {customCover ? 'Custom Cover Image' : 'Default Cover Image'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {customCover && (
+                              <button onClick={() => handleDeleteCover(customCover.id)} style={styles.deleteBtn}>
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                {Object.keys(groupedItems).map((catName) => {
+                  const catItems = groupedItems[catName];
+                  const isOpen = !!expandedCategories[catName];
+                  return (
+                    <div key={catName} style={styles.folderContainer}>
+                      <div
+                        onClick={() => toggleCategory(catName)}
+                        className="folder-header"
+                        style={styles.folderHeader}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          {/* Folder SVG Icon */}
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#e5b842"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                          </svg>
+                          <span style={styles.folderTitle}>{catName}</span>
+                          <span style={styles.folderBadge}>
+                            {catItems.length} {catItems.length === 1 ? 'item' : 'items'}
+                          </span>
+                        </div>
+                        
+                        {/* Chevron Icon */}
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#9da3ae"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{
+                            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.2s ease',
+                          }}
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </div>
+
+                      {isOpen && (
+                        <div style={styles.folderContent}>
+                          {catItems.map((item) => (
+                            <div key={item.id} style={styles.itemRow}>
+                              <div style={styles.itemThumbWrapper}>
+                                <img
+                                  src={item.mediaUrl}
+                                  alt={item.title}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                              </div>
+
+                              <div style={{ flex: 1 }}>
+                                <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff', marginBottom: '2px' }}>{item.title}</h4>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '11px', color: '#e5b842', fontWeight: '600' }}>{item.category}</span>
+                                  <span style={{ color: '#9da3ae', fontSize: '10px' }}>•</span>
+                                  <span style={{ fontSize: '11px', color: '#9da3ae' }}>
+                                    {item.instagramUrl ? 'Instagram Embed' : 'Local Host'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <button onClick={() => handleDelete(item.id)} style={styles.deleteBtn}>
+                                Delete
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
                 {items.length === 0 && (
                   <div style={{ textAlign: 'center', padding: '40px 0', color: '#646a73' }}>
@@ -969,5 +1409,61 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '11px',
     color: '#e5b842',
     fontWeight: '600',
+  },
+  folderContainer: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '6px',
+    backgroundColor: 'rgba(255, 255, 255, 0.01)',
+    borderRadius: '16px',
+    padding: '4px',
+    border: '1px solid rgba(255, 255, 255, 0.02)',
+  },
+  folderHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 16px',
+    borderRadius: '12px',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    cursor: 'pointer',
+    userSelect: 'none' as const,
+    border: '1px solid rgba(255, 255, 255, 0.02)',
+  },
+  folderTitle: {
+    fontSize: '14px',
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  folderBadge: {
+    fontSize: '10px',
+    color: '#e5b842',
+    backgroundColor: 'rgba(229, 184, 66, 0.08)',
+    border: '1px solid rgba(229, 184, 66, 0.15)',
+    padding: '2px 8px',
+    borderRadius: '10px',
+    fontWeight: '600' as const,
+  },
+  folderContent: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '12px',
+    padding: '8px 4px 4px 4px',
+  },
+  subTabContainer: {
+    display: 'flex',
+    gap: '16px',
+    marginBottom: '20px',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+    paddingBottom: '8px',
+  },
+  subTabBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '13px',
+    padding: '6px 12px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    fontWeight: '600' as const,
   },
 };

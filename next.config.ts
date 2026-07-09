@@ -11,9 +11,12 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '*.instagram.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
     ],
   },
 };
 
 export default nextConfig;
-
