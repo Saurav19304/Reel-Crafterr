@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 
 export default function Hero() {
   const [showreelOpen, setShowreelOpen] = useState(false);
@@ -38,9 +39,9 @@ export default function Hero() {
               Watch Showreel
             </button>
 
-            <a href="#portfolio" style={styles.secondaryBtn} className="glass-panel">
+            <Link href="/portfolio" style={styles.secondaryBtn} className="glass-panel">
               Explore Work
-            </a>
+            </Link>
           </div>
         </div>
       </div>
