@@ -90,7 +90,7 @@ export default function BookingForm() {
             <div style={styles.featureItem}>
               <span style={styles.featureIcon}>📱</span>
               <div>
-                <h4 style={styles.featureTitle}>iPhone 17 Pro Max Rig</h4>
+                <h4 style={styles.featureTitle}>iPhone Rig</h4>
                 <p style={styles.featureText}>Ultimate flexibility and high-end cinematic aesthetics without intrusive gear.</p>
               </div>
             </div>

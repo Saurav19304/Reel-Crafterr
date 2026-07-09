@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   keywords: ["Reel Crafterr", "Videographer", "Jaipur", "Wedding Cinematography", "Car shoot", "Reel Shooter", "iPhone Videography"],
   openGraph: {
     title: "Reel Crafterr | Cinematic Videography & Reels",
-    description: "Portfolio of Reel Crafterr (@reel_crafterr). Shoot on iPhone 17 Pro Max. Book wedding, automotive, and decor shoots.",
+    description: "Portfolio of Reel Crafterr (@reel_crafterr). Shoot on iPhone. Book wedding, automotive, and decor shoots.",
     url: "https://instagram.com/reel_crafterr",
     type: "website",
   }

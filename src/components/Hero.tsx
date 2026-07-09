@@ -15,7 +15,7 @@ export default function Hero() {
         <div style={styles.content}>
           <div style={styles.badge} className="glass-panel">
             <span style={styles.badgeDot} />
-            <span>CERTIFIED IPHONE 17 PRO MAX CINEMA</span>
+            <span>CERTIFIED IPHONE CINEMA</span>
           </div>
 
           <h1 style={styles.title}>

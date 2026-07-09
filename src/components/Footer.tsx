@@ -29,7 +29,7 @@ export default function Footer() {
 
         <div style={styles.right}>
           <p style={styles.tagline}>
-            Shoot in : <span style={{ color: '#00f2fe', fontWeight: '700' }}>iPhone 17 Pro Max</span>
+            Shoot in : <span style={{ color: '#00f2fe', fontWeight: '700' }}>iPhone</span>
           </p>
           <a
             href="https://www.instagram.com/reel_crafterr/"

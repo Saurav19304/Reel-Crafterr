@@ -89,7 +89,7 @@ export const HIGHLIGHTS: Highlight[] = [
     emoji: '⚙️',
     gradient: 'linear-gradient(135deg, #434343 0%, #000000 100%)',
     slides: [
-      { id: 'h-wo-1', type: 'image', url: '/assets/images/logo.png', caption: 'Gear Setup: iPhone 17 Pro Max + Gimbal + ND Filters 📱' }
+      { id: 'h-wo-1', type: 'image', url: '/assets/images/logo.png', caption: 'Gear Setup: iPhone + Gimbal + ND Filters 📱' }
     ]
   }
 ];
@@ -104,7 +104,7 @@ export const REELS: Reel[] = [
     comments: '184',
     views: '150K',
     duration: '0:30',
-    description: 'A magical wedding entry shot on iPhone 17 Pro Max, color graded in DaVinci Resolve. Captured with native 4K ProRes.'
+    description: 'A magical wedding entry shot on iPhone, color graded in DaVinci Resolve. Captured with native 4K ProRes.'
   },
   {
     id: 'r-2',
@@ -144,7 +144,7 @@ export const REELS: Reel[] = [
 export const STATS: Stat[] = [
   { id: 's-1', value: '1.5k+', label: 'Instagram Community', description: 'Active and growing creators & clients' },
   { id: 's-2', value: '50+', label: 'Cinematic Shoots', description: 'Weddings, automotive and corporate shoots' },
-  { id: 's-3', value: '100%', label: 'iPhone 17 Pro Max Rig', description: 'Fully dynamic 4K ProRes capabilities' },
+  { id: 's-3', value: '100%', label: 'iPhone Rig', description: 'Fully dynamic 4K ProRes capabilities' },
   { id: 's-4', value: '24h', label: 'Turnaround Option', description: 'Fast delivery for social-ready highlights' }
 ];
 
@@ -154,7 +154,7 @@ export const SERVICES: Service[] = [
     title: 'Automotive Showcases',
     description: 'High-energy, dynamic tracking shots capturing pure exhaust notes, speed-ramp edits, and professional color grading.',
     icon: '🏎️',
-    tags: ['Gimbal Tracking', 'Speed Ramping', 'iPhone 17 Pro Max']
+    tags: ['Gimbal Tracking', 'Speed Ramping', 'iPhone']
   },
   {
     id: 'ser-2',
