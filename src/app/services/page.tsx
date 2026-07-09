@@ -37,55 +37,65 @@ const SERVICES = [
 
 const PACKAGES = [
   {
-    id: 'p-vibe',
-    title: 'Vibe Check (Starter)',
+    id: 'p-starter',
+    title: 'Starter Plan',
     price: '₹9,999',
-    description: 'Ideal for quick highlights, single car runs, or basic product rollouts.',
+    description: 'Perfect for quick highlight reels and basic social media coverage.',
     features: [
-      '1 Hour Cinema Shoot',
-      '1 Dynamic Cinematic Reel',
-      'Basic Speed Ramps & Color Grade',
-      'Trending Audio Integration',
-      'Delivery in under 48 hours'
+      'Reel Shoot',
+      'Reel Edit',
+      'Normal Photoshoot',
+      'Content Idea',
+      'Deliverables: 6 Reels',
+      'Deliverables: 10 Edited Photos',
+      'Deliverables: RAW Data Drive Link'
     ],
-    badge: 'Starter Package'
+    badge: 'Starter Plan'
   },
   {
-    id: 'p-showcase',
-    title: 'Cinematic Showcase (Popular)',
-    price: '₹24,999',
-    description: 'Perfect for weddings (Haldi/Entries), automotive shoots, and brand promos.',
+    id: 'p-growth',
+    title: 'Growth Plan',
+    price: '₹14,999',
+    description: 'Ideal for expanding your brand footprint and social media reach.',
     features: [
-      'Half-Day Cinema Session',
-      '3 High-Energy Cinematic Reels',
-      'Advanced Tracking & Stabilized Shots',
-      'Professional Audio Exhaust/Atmosphere Sync',
-      'DaVinci Resolve Color Grading',
-      'Delivery in under 48 hours'
+      'Cinematic Reel Shoot',
+      'Reel Edit',
+      'Professional Photoshoot',
+      'Content Idea',
+      'Instagram Post',
+      'Deliverables: 10 Reels',
+      'Deliverables: 15 Edited Photos',
+      'Deliverables: 6 Instagram Posts',
+      'Deliverables: RAW Data Drive Link'
     ],
-    badge: 'Most Popular',
+    badge: 'Growth Plan',
     popular: true
   },
   {
-    id: 'p-creative',
-    title: 'Premium Creative (Elite)',
-    price: '₹49,999',
-    description: 'Full production campaign for luxury brands, wedding events, and auto promos.',
+    id: 'p-professional',
+    title: 'Professional Plan',
+    price: '₹24,999',
+    description: 'Complete high-end production campaign for brands and professional shoots.',
     features: [
-      'Full-Day Multi-Angle Capture',
-      '6 Premium Cinematic Reels',
-      'Active Rigging & Gimbal Focus Pulls',
-      'Full Sound Design & Ambient Custom Soundscapes',
-      'ProRes 4K Log DaVinci Grading',
-      'Full Raw Footage Bundle Included',
-      'Priority 24-Hour Turnaround'
+      'Cinematic Reel Shoot',
+      'Professional Reel Edit',
+      'Professional Photoshoot',
+      'Content Idea',
+      'Graphic Design for Instagram Post',
+      'Instagram ID Handle',
+      'Profile Optimization',
+      'Meta Ads Run (Budget by Client)',
+      'Deliverables: 12 Reels',
+      'Deliverables: 15 Edited Photos',
+      'Deliverables: 6 Instagram Posts',
+      'Deliverables: RAW Data Drive Link'
     ],
-    badge: 'Ultimate Value'
+    badge: 'Professional Plan'
   }
 ];
 
 export default function ServicesPage() {
-  const [selectedPlan, setSelectedPlan] = useState<string>('Cinematic Showcase');
+  const [selectedPlan, setSelectedPlan] = useState<string>('Growth Plan');
   const [name, setName] = useState<string>('');
   const [contact, setContact] = useState<string>('');
   const [brief, setBrief] = useState<string>('');
@@ -284,9 +294,9 @@ export default function ServicesPage() {
                           onChange={(e) => setSelectedPlan(e.target.value)}
                           style={styles.selectInput}
                         >
-                          <option value="Vibe Check (Starter)">Vibe Check (Starter) - Base</option>
-                          <option value="Cinematic Showcase">Cinematic Showcase - Mid</option>
-                          <option value="Premium Creative (Elite)">Premium Creative (Elite) - High</option>
+                          <option value="Starter Plan">Starter Plan - ₹9,999</option>
+                          <option value="Growth Plan">Growth Plan - ₹14,999</option>
+                          <option value="Professional Plan">Professional Plan - ₹24,999</option>
                           <option value="Custom Project Package">Custom Project Package - Custom</option>
                         </select>
                       </div>
