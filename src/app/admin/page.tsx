@@ -363,28 +363,46 @@ export default function AdminPage() {
         finalType = cloudResult.resource_type === 'video' ? 'video' : 'image';
         finalEmbedUrl = ''; // direct uploads don't use Instagram/YouTube embeds
       } else if (instagramUrl) {
-        const ytId = getYoutubeId(instagramUrl);
-        if (ytId) {
+        const lowerUrl = instagramUrl.toLowerCase();
+        const isDropbox = lowerUrl.includes('dropbox.com') || lowerUrl.includes('dropboxusercontent.com');
+        const isDirectVideo = /\.(mp4|mov|webm|avi|m4v)(\?|$)/i.test(instagramUrl);
+
+        if (isDropbox || isDirectVideo) {
           finalType = 'video';
-          // Use YouTube high quality preview thumbnail as preview card
-          finalMediaUrl = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
-          // Form embed link
-          finalEmbedUrl = `https://www.youtube.com/embed/${ytId}`;
-        } else {
-          // Instagram link: we can determine video/image type and use category thumbnail placeholder
-          const isReel = instagramUrl.includes('/reel/') || instagramUrl.includes('/p/');
-          finalType = isReel ? 'video' : 'image';
-          
-          if (category.toLowerCase().includes('automotive')) {
-            finalMediaUrl = '/assets/images/car.png';
-          } else if (category.toLowerCase().includes('decor') || category.toLowerCase().includes('estate')) {
-            finalMediaUrl = '/assets/images/decor.png';
-          } else if (category.toLowerCase().includes('wedding')) {
-            finalMediaUrl = '/assets/images/wedding.png';
-          } else {
-            finalMediaUrl = '/assets/images/haldi.png';
+          let directUrl = instagramUrl;
+
+          if (isDropbox) {
+            if (directUrl.includes('dl=0')) {
+              directUrl = directUrl.replace('dl=0', 'raw=1');
+            } else if (!directUrl.includes('raw=1')) {
+              directUrl = directUrl.includes('?') ? `${directUrl}&raw=1` : `${directUrl}?raw=1`;
+            }
+            directUrl = directUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
           }
-          finalEmbedUrl = instagramUrl;
+
+          finalMediaUrl = directUrl;
+          finalEmbedUrl = ''; // bypass embed iframe and use direct video stream tag
+        } else {
+          const ytId = getYoutubeId(instagramUrl);
+          if (ytId) {
+            finalType = 'video';
+            finalMediaUrl = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+            finalEmbedUrl = `https://www.youtube.com/embed/${ytId}`;
+          } else {
+            const isReel = instagramUrl.includes('/reel/') || instagramUrl.includes('/p/');
+            finalType = isReel ? 'video' : 'image';
+            
+            if (category.toLowerCase().includes('automotive')) {
+              finalMediaUrl = '/assets/images/car.png';
+            } else if (category.toLowerCase().includes('decor') || category.toLowerCase().includes('estate')) {
+              finalMediaUrl = '/assets/images/decor.png';
+            } else if (category.toLowerCase().includes('wedding')) {
+              finalMediaUrl = '/assets/images/wedding.png';
+            } else {
+              finalMediaUrl = '/assets/images/haldi.png';
+            }
+            finalEmbedUrl = instagramUrl;
+          }
         }
       }
 
