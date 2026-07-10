@@ -243,7 +243,7 @@ export default function AdminPage() {
     if (file.size <= threshold) {
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/upload`, true);
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, true);
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
@@ -284,7 +284,7 @@ export default function AdminPage() {
 
       const chunkResult = await new Promise<any>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/upload`, true);
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, true);
 
         xhr.setRequestHeader('X-Unique-Upload-Id', uniqueUploadId);
         xhr.setRequestHeader('Content-Range', `bytes ${start}-${end - 1}/${totalSize}`);
