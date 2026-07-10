@@ -27,6 +27,11 @@ const matchCategory = (itemCat: string, catId: string) => {
   return normalizedItem === catId || normalizedItem.includes(catId);
 };
 
+const isVideoFile = (url: string) => {
+  if (!url) return false;
+  return url.includes('/video/upload/') || !/\.(jpg|jpeg|png|webp|gif|svg)$/i.test(url);
+};
+
 export default function PortfolioPage() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [categories, setCategories] = useState(CATEGORIES);
@@ -116,14 +121,29 @@ export default function PortfolioPage() {
                     className="glass-panel"
                   >
                     <div style={styles.imageWrapper}>
-                      <img
-                        src={cat.cover}
-                        alt={cat.title}
-                        style={{
-                          ...styles.coverImage,
-                          transform: isHovered ? 'scale(1.05)' : 'scale(1)',
-                        }}
-                      />
+                      {isVideoFile(cat.cover) ? (
+                        <video
+                          src={cat.cover}
+                          muted
+                          playsInline
+                          autoPlay
+                          loop
+                          style={{
+                            ...styles.coverImage,
+                            transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <img
+                          src={cat.cover}
+                          alt={cat.title}
+                          style={{
+                            ...styles.coverImage,
+                            transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+                          }}
+                        />
+                      )}
 
                       {/* ap-images.com.au Centered Title Hover Overlay */}
                       <div style={{

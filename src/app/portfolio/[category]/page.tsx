@@ -16,6 +16,11 @@ interface PortfolioItem {
   views?: string;
 }
 
+const isVideoFile = (url: string) => {
+  if (!url) return false;
+  return url.includes('/video/upload/') || !/\.(jpg|jpeg|png|webp|gif|svg)$/i.test(url);
+};
+
 const CATEGORY_METADATA: Record<string, { title: string; description: string }> = {
   'automotive': {
     title: 'Automotive Showcases',
@@ -135,14 +140,29 @@ export default function CategoryShowcase({ params }: { params: Promise<{ categor
                       style={styles.card}
                     >
                       <div style={styles.imageWrapper}>
-                        <img
-                          src={item.mediaUrl}
-                          alt={item.title}
-                          style={{
-                            ...styles.coverImage,
-                            transform: isHovered ? 'scale(1.05)' : 'scale(1)',
-                          }}
-                        />
+                        {isVideoFile(item.mediaUrl) ? (
+                          <video
+                            src={item.mediaUrl}
+                            muted
+                            playsInline
+                            autoPlay
+                            loop
+                            style={{
+                              ...styles.coverImage,
+                              transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        ) : (
+                          <img
+                            src={item.mediaUrl}
+                            alt={item.title}
+                            style={{
+                              ...styles.coverImage,
+                              transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+                            }}
+                          />
+                        )}
 
                         {/* Hover Play/View Icon and Overlay (ap-images.com.au inspired) */}
                         <div style={{

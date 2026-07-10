@@ -21,6 +21,11 @@ interface BookingItem {
   createdAt: string;
 }
 
+const isVideoFile = (url: string) => {
+  if (!url) return false;
+  return url.includes('/video/upload/') || !/\.(jpg|jpeg|png|webp|gif|svg)$/i.test(url);
+};
+
 export default function AdminPage() {
   // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -225,6 +230,100 @@ export default function AdminPage() {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
+  const uploadFileToCloudinary = async (
+    file: File,
+    cloudName: string,
+    uploadPreset: string,
+    onProgress: (percent: number) => void
+  ): Promise<{ secure_url: string; resource_type: string }> => {
+    // If the file is smaller than 20MB, do a standard single-shot upload
+    const threshold = 20 * 1024 * 1024;
+    if (file.size <= threshold) {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/upload`, true);
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            onProgress(percent);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            const errData = JSON.parse(xhr.responseText || '{}');
+            reject(new Error(errData.error?.message || 'Cloudinary upload failed.'));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('Network error during Cloudinary upload.'));
+
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('upload_preset', uploadPreset);
+        xhr.send(fd);
+      });
+    }
+
+    // Otherwise, perform a chunked upload
+    // Cloudinary chunked upload recommends 5MB or larger chunks. Let's use 10MB chunks.
+    const chunkSize = 10 * 1024 * 1024;
+    const totalSize = file.size;
+    const uniqueUploadId = 'cloudinary_chunked_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    let start = 0;
+    let lastResult: any = null;
+
+    while (start < totalSize) {
+      const end = Math.min(start + chunkSize, totalSize);
+      const chunk = file.slice(start, end);
+
+      const chunkResult = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/upload`, true);
+
+        xhr.setRequestHeader('X-Unique-Upload-Id', uniqueUploadId);
+        xhr.setRequestHeader('Content-Range', `bytes ${start}-${end - 1}/${totalSize}`);
+
+        const currentStart = start;
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const chunkProgress = event.loaded;
+            const percent = Math.min(Math.round(((currentStart + chunkProgress) / totalSize) * 100), 99);
+            onProgress(percent);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status === 200 || xhr.status === 201) {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            const errData = JSON.parse(xhr.responseText || '{}');
+            reject(new Error(errData.error?.message || 'Cloudinary chunked upload failed.'));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('Network error during Cloudinary chunked upload.'));
+
+        const fd = new FormData();
+        fd.append('file', chunk);
+        fd.append('upload_preset', uploadPreset);
+        xhr.send(fd);
+      });
+
+      lastResult = chunkResult;
+      start = end;
+    }
+
+    if (!lastResult || !lastResult.secure_url) {
+      throw new Error('Upload completed, but no secure_url returned.');
+    }
+
+    return lastResult;
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
@@ -256,33 +355,7 @@ export default function AdminPage() {
         }
 
         // Upload directly from browser to Cloudinary and track progress
-        const cloudResult = await new Promise<{ secure_url: string; resource_type: string }>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/upload`, true);
-
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              const percent = Math.round((event.loaded / event.total) * 100);
-              setUploadProgress(percent);
-            }
-          };
-
-          xhr.onload = () => {
-            if (xhr.status === 200) {
-              resolve(JSON.parse(xhr.responseText));
-            } else {
-              const errData = JSON.parse(xhr.responseText || '{}');
-              reject(new Error(errData.error?.message || 'Cloudinary upload failed.'));
-            }
-          };
-
-          xhr.onerror = () => reject(new Error('Network error during Cloudinary upload.'));
-
-          const fd = new FormData();
-          fd.append('file', file);
-          fd.append('upload_preset', uploadPreset);
-          xhr.send(fd);
-        });
+        const cloudResult = await uploadFileToCloudinary(file, cloudName, uploadPreset, setUploadProgress);
 
         finalMediaUrl = cloudResult.secure_url;
         finalType = cloudResult.resource_type === 'video' ? 'video' : 'image';
@@ -371,33 +444,7 @@ export default function AdminPage() {
         }
 
         // Upload directly from browser to Cloudinary and track progress
-        const cloudResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/upload`, true);
-
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              const percent = Math.round((event.loaded / event.total) * 100);
-              setUploadProgress(percent);
-            }
-          };
-
-          xhr.onload = () => {
-            if (xhr.status === 200) {
-              resolve(JSON.parse(xhr.responseText));
-            } else {
-              const errData = JSON.parse(xhr.responseText || '{}');
-              reject(new Error(errData.error?.message || 'Cloudinary upload failed.'));
-            }
-          };
-
-          xhr.onerror = () => reject(new Error('Network error during Cloudinary upload.'));
-
-          const fd = new FormData();
-          fd.append('file', file);
-          fd.append('upload_preset', uploadPreset);
-          xhr.send(fd);
-        });
+        const cloudResult = await uploadFileToCloudinary(file, cloudName, uploadPreset, setUploadProgress);
 
         finalMediaUrl = cloudResult.secure_url;
       }
@@ -910,11 +957,22 @@ export default function AdminPage() {
                         return (
                           <div key={catId} style={styles.itemRow}>
                             <div style={styles.itemThumbWrapper}>
-                              <img
-                                src={currentCoverUrl}
-                                alt={catTitles[catId]}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              />
+                               {isVideoFile(currentCoverUrl) ? (
+                                 <video
+                                   src={currentCoverUrl}
+                                   muted
+                                   playsInline
+                                   autoPlay
+                                   loop
+                                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                 />
+                               ) : (
+                                 <img
+                                   src={currentCoverUrl}
+                                   alt={catTitles[catId]}
+                                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                 />
+                               )}
                             </div>
 
                             <div style={{ flex: 1 }}>
@@ -993,11 +1051,22 @@ export default function AdminPage() {
                           {catItems.map((item) => (
                             <div key={item.id} style={styles.itemRow}>
                               <div style={styles.itemThumbWrapper}>
-                                <img
-                                  src={item.mediaUrl}
-                                  alt={item.title}
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                />
+                                {isVideoFile(item.mediaUrl) ? (
+                                  <video
+                                    src={item.mediaUrl}
+                                    muted
+                                    playsInline
+                                    autoPlay
+                                    loop
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                ) : (
+                                  <img
+                                    src={item.mediaUrl}
+                                    alt={item.title}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                )}
                               </div>
 
                               <div style={{ flex: 1 }}>
