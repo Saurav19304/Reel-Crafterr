@@ -7,7 +7,7 @@ const DB_URL = "https://extendsclass.com/api/json-storage/bin/fdfccdb";
 // GET all portfolio items (or category covers)
 export async function GET(request: NextRequest) {
   try {
-    const res = await fetch(DB_URL, {
+    const res = await fetch(`${DB_URL}?t=${Date.now()}`, {
       cache: "no-store",
       headers: {
         "Cache-Control": "no-cache",
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
       let items = [];
       try {
-        const getRes = await fetch(DB_URL, {
+        const getRes = await fetch(`${DB_URL}?t=${Date.now()}`, {
           cache: "no-store",
           headers: {
             "Cache-Control": "no-cache",
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
       let items = [];
       try {
-        const getRes = await fetch(DB_URL, {
+        const getRes = await fetch(`${DB_URL}?t=${Date.now()}`, {
           cache: "no-store",
           headers: {
             "Cache-Control": "no-cache",
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     // Get current portfolio database
     let items = [];
     try {
-      const getRes = await fetch(DB_URL, {
+      const getRes = await fetch(`${DB_URL}?t=${Date.now()}`, {
         cache: "no-store",
         headers: {
           "Cache-Control": "no-cache",
@@ -226,7 +226,7 @@ export async function DELETE(request: NextRequest) {
 
     // Get current portfolio database
     let items = [];
-    const getRes = await fetch(DB_URL, {
+    const getRes = await fetch(`${DB_URL}?t=${Date.now()}`, {
       cache: "no-store",
       headers: {
         "Cache-Control": "no-cache",
