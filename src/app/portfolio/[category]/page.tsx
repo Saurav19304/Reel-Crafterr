@@ -228,7 +228,7 @@ export default function CategoryShowcase({ params }: { params: Promise<{ categor
               ...styles.lightboxContainer,
               maxWidth: selectedItem.instagramUrl 
                 ? (selectedItem.instagramUrl.includes('youtube.com') ? '380px' : '440px') 
-                : '900px',
+                : (selectedItem.type === 'video' ? '440px' : '900px'),
               aspectRatio: selectedItem.instagramUrl 
                 ? '9/16' 
                 : 'auto',
