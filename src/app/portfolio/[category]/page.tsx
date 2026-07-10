@@ -350,11 +350,13 @@ const styles = {
   imageWrapper: {
     position: 'relative' as const,
     width: '100%',
+    aspectRatio: '9/16',
     overflow: 'hidden',
   },
   coverImage: {
     width: '100%',
-    height: 'auto',
+    height: '100%',
+    objectFit: 'cover' as const,
     display: 'block',
     transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
   },
