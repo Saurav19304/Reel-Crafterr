@@ -7,7 +7,14 @@ const DB_URL = "https://extendsclass.com/api/json-storage/bin/aacfeca";
 // GET all bookings
 export async function GET() {
   try {
-    const res = await fetch(DB_URL, { cache: "no-store" });
+    const res = await fetch(DB_URL, {
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache"
+      },
+      next: { revalidate: 0 }
+    });
     if (!res.ok) {
       return NextResponse.json([], { 
         status: 200,
@@ -40,7 +47,14 @@ export async function POST(request: NextRequest) {
     // Get current bookings
     let items = [];
     try {
-      const getRes = await fetch(DB_URL, { cache: "no-store" });
+      const getRes = await fetch(DB_URL, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache"
+        },
+        next: { revalidate: 0 }
+      });
       if (getRes.ok) {
         items = await getRes.json();
       }
@@ -92,7 +106,14 @@ export async function DELETE(request: NextRequest) {
 
     // Get current bookings
     let items = [];
-    const getRes = await fetch(DB_URL, { cache: "no-store" });
+    const getRes = await fetch(DB_URL, {
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache"
+      },
+      next: { revalidate: 0 }
+    });
     if (getRes.ok) {
       items = await getRes.json();
     }
