@@ -237,7 +237,7 @@ export default function CategoryShowcase({ params }: { params: Promise<{ categor
                 <div style={{ ...styles.embedWrapper, overflow: 'hidden' }}>
                   <iframe
                     src={selectedItem.instagramUrl.includes('youtube.com') 
-                      ? `${selectedItem.instagramUrl}?autoplay=1&mute=1&loop=1&playlist=${selectedItem.instagramUrl.split('/').pop()}&controls=0&modestbranding=1&rel=0`
+                      ? `${selectedItem.instagramUrl}?autoplay=1&loop=1&playlist=${selectedItem.instagramUrl.split('/').pop()}&controls=0&modestbranding=1&rel=0`
                       : `${selectedItem.instagramUrl.endsWith('/') ? selectedItem.instagramUrl : selectedItem.instagramUrl + '/'}embed/`
                     }
                     style={{
