@@ -138,6 +138,7 @@ export default function AdminPage() {
       });
 
       if (res.ok) {
+        setCustomCovers((prev) => prev.filter((item) => String(item.id) !== String(id)));
         fetchCovers();
       } else {
         const data = await res.json();
@@ -174,6 +175,7 @@ export default function AdminPage() {
       });
 
       if (res.ok) {
+        setBookings((prev) => prev.filter((booking) => booking.id !== id));
         fetchBookings();
       } else {
         const data = await res.json();
@@ -491,6 +493,7 @@ export default function AdminPage() {
       });
 
       if (res.ok) {
+        setItems((prev) => prev.filter((item) => String(item.id) !== String(id)));
         fetchItems();
       } else {
         const data = await res.json();

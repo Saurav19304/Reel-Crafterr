@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 const DB_URL = "https://extendsclass.com/api/json-storage/bin/fdfccdb";
 
 // GET all portfolio items (or category covers)
