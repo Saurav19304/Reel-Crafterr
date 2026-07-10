@@ -227,20 +227,26 @@ export default function CategoryShowcase({ params }: { params: Promise<{ categor
             <div style={{
               ...styles.lightboxContainer,
               maxWidth: selectedItem.instagramUrl 
-                ? (selectedItem.instagramUrl.includes('youtube.com') ? '800px' : '440px') 
+                ? (selectedItem.instagramUrl.includes('youtube.com') ? '380px' : '440px') 
                 : '900px',
               aspectRatio: selectedItem.instagramUrl 
-                ? (selectedItem.instagramUrl.includes('youtube.com') ? '16/9' : '9/16') 
+                ? '9/16' 
                 : 'auto',
             }}>
               {selectedItem.instagramUrl ? (
-                <div style={styles.embedWrapper}>
+                <div style={{ ...styles.embedWrapper, overflow: 'hidden' }}>
                   <iframe
                     src={selectedItem.instagramUrl.includes('youtube.com') 
                       ? `${selectedItem.instagramUrl}?autoplay=1&mute=1&loop=1&playlist=${selectedItem.instagramUrl.split('/').pop()}&controls=0&modestbranding=1&rel=0`
                       : `${selectedItem.instagramUrl.endsWith('/') ? selectedItem.instagramUrl : selectedItem.instagramUrl + '/'}embed/`
                     }
-                    style={styles.embedIframe}
+                    style={{
+                      ...styles.embedIframe,
+                      ...(selectedItem.instagramUrl.includes('youtube.com') ? {
+                        height: '116%',
+                        top: '-8%',
+                      } : {})
+                    }}
                     frameBorder="0"
                     scrolling="no"
                     allowTransparency={true}
