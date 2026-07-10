@@ -55,6 +55,49 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Check if deletion action (works around environments that block HTTP DELETE)
+    if (body.action === 'delete') {
+      const { id } = body;
+      if (!id) {
+        return NextResponse.json({ error: "Item ID is required for deletion." }, { status: 400 });
+      }
+
+      let items = [];
+      try {
+        const getRes = await fetch(DB_URL, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
+          },
+          next: { revalidate: 0 }
+        });
+        if (getRes.ok) {
+          items = await getRes.json();
+        }
+      } catch (e) {
+        console.warn("Could not read portfolio items for deletion");
+      }
+
+      if (!Array.isArray(items)) {
+        return NextResponse.json({ error: "No portfolio database found." }, { status: 404 });
+      }
+
+      const filtered = items.filter((item: any) => String(item.id) !== String(id));
+
+      const putRes = await fetch(DB_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(filtered)
+      });
+
+      if (!putRes.ok) {
+        throw new Error("Failed to write to database bin");
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
     // Check if updating category cover page
     if (body.isCover) {
       const { category, mediaUrl } = body;

@@ -38,7 +38,52 @@ export async function GET() {
 // POST new booking
 export async function POST(request: NextRequest) {
   try {
-    const { name, contact, plan, date, brief } = await request.json();
+    const body = await request.json();
+
+    // Check if deletion action (works around environments that block HTTP DELETE)
+    if (body.action === 'delete') {
+      const { id } = body;
+      if (!id) {
+        return NextResponse.json({ error: "Booking ID is required for deletion." }, { status: 400 });
+      }
+
+      let items = [];
+      try {
+        const getRes = await fetch(DB_URL, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
+          },
+          next: { revalidate: 0 }
+        });
+        if (getRes.ok) {
+          items = await getRes.json();
+        }
+      } catch (e) {
+        console.warn("Could not read bookings for deletion");
+      }
+
+      if (!Array.isArray(items)) {
+        return NextResponse.json({ error: "No bookings database found." }, { status: 404 });
+      }
+
+      const filtered = items.filter((item: any) => item.id !== id);
+
+      const putRes = await fetch(DB_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(filtered)
+      });
+
+      if (!putRes.ok) {
+        throw new Error("Failed to write to database bin");
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    const { name, contact, plan, date, brief } = body;
 
     if (!name || !contact || !plan) {
       return NextResponse.json({ error: "Name, contact, and plan are required." }, { status: 400 });

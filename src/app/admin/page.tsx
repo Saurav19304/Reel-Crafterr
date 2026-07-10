@@ -132,9 +132,9 @@ export default function AdminPage() {
 
     try {
       const res = await fetch('/api/portfolio', {
-        method: 'DELETE',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ action: 'delete', id }),
       });
 
       if (res.ok) {
@@ -169,9 +169,9 @@ export default function AdminPage() {
 
     try {
       const res = await fetch('/api/bookings', {
-        method: 'DELETE',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ action: 'delete', id }),
       });
 
       if (res.ok) {
@@ -487,9 +487,9 @@ export default function AdminPage() {
 
     try {
       const res = await fetch('/api/portfolio', {
-        method: 'DELETE',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ action: 'delete', id }),
       });
 
       if (res.ok) {
