@@ -386,7 +386,7 @@ export default function AdminPage() {
           const ytId = getYoutubeId(instagramUrl);
           if (ytId) {
             finalType = 'video';
-            finalMediaUrl = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+            finalMediaUrl = `https://i.ytimg.com/vi/${ytId}/maxresdefault.jpg`;
             finalEmbedUrl = `https://www.youtube.com/embed/${ytId}`;
           } else {
             const isReel = instagramUrl.includes('/reel/') || instagramUrl.includes('/p/');
