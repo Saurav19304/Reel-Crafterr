@@ -240,29 +240,29 @@ a {
   100% { transform: rotate(360deg); }
 }
 
-/* Responsive Masonry Grid using CSS Columns */
+/* Responsive Grid for Category Showcase */
 .masonry-grid {
-  column-count: 3;
-  column-gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
   width: 100%;
 }
 
 .masonry-card {
-  display: inline-block;
   width: 100%;
-  break-inside: avoid;
-  margin-bottom: 24px;
 }
 
 @media (max-width: 900px) {
   .masonry-grid {
-    column-count: 2;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
   }
 }
 
 @media (max-width: 600px) {
   .masonry-grid {
-    column-count: 1;
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 

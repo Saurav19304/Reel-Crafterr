@@ -42,6 +42,14 @@ const CATEGORY_METADATA: Record<string, { title: string; description: string }> 
     title: 'Parties (Birthday & Baby Shower)',
     description: 'Fun, vibrant highlight compilations of birthday parties, milestone events, and baby showers.',
   },
+  'photography': {
+    title: 'Photography Showcases',
+    description: 'Stunning professional photography, captured with precision to preserve timeless memories and creative concepts.',
+  },
+  'modeling': {
+    title: 'Modeling Portfolios',
+    description: 'High-fashion editorial, commercial, and runway portfolio showcases.',
+  },
 };
 
 export default function CategoryShowcase({ params }: { params: Promise<{ category: string }> }) {

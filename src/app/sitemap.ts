@@ -8,7 +8,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "luxury-decor",
     "brands",
     "weddings",
-    "parties"
+    "parties",
+    "photography",
+    "modeling"
   ];
 
   const routes = [

@@ -10,7 +10,9 @@ const CATEGORIES = [
   { id: 'luxury-decor', title: 'Luxury Decor & Real Estate', cover: '/assets/images/decor.png', count: '0 Shoots' },
   { id: 'brands', title: 'Brand & Commercial Reels', cover: '/assets/images/haldi.png', count: '0 Shoots' },
   { id: 'weddings', title: 'Premium Weddings', cover: '/assets/images/wedding.png', count: '0 Shoots' },
-  { id: 'parties', title: 'Parties (Birthday & Baby Shower)', cover: '/assets/images/gimbal-hero.png', count: '0 Shoots' }
+  { id: 'parties', title: 'Parties (Birthday & Baby Shower)', cover: '/assets/images/gimbal-hero.png', count: '0 Shoots' },
+  { id: 'photography', title: 'Photography', cover: '/assets/images/gimbal-hero.png', count: '0 Shoots' },
+  { id: 'modeling', title: 'Modeling', cover: '/assets/images/profile.jpg', count: '0 Shoots' }
 ];
 
 const matchCategory = (itemCat: string, catId: string) => {

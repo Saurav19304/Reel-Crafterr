@@ -398,6 +398,10 @@ export default function AdminPage() {
               finalMediaUrl = '/assets/images/decor.png';
             } else if (category.toLowerCase().includes('wedding')) {
               finalMediaUrl = '/assets/images/wedding.png';
+            } else if (category.toLowerCase().includes('photography')) {
+              finalMediaUrl = '/assets/images/gimbal-hero.png';
+            } else if (category.toLowerCase().includes('modeling')) {
+              finalMediaUrl = '/assets/images/profile.jpg';
             } else {
               finalMediaUrl = '/assets/images/haldi.png';
             }
@@ -692,6 +696,8 @@ export default function AdminPage() {
                     <option value="Brands">Brands</option>
                     <option value="Weddings">Weddings</option>
                     <option value="Parties">Parties</option>
+                    <option value="Photography">Photography</option>
+                    <option value="Modeling">Modeling</option>
                   </select>
                 </div>
 
@@ -804,6 +810,8 @@ export default function AdminPage() {
                     <option value="Brands">Brands</option>
                     <option value="Weddings">Weddings</option>
                     <option value="Parties">Parties</option>
+                    <option value="Photography">Photography</option>
+                    <option value="Modeling">Modeling</option>
                   </select>
                 </div>
 
@@ -957,21 +965,25 @@ export default function AdminPage() {
 
                   {coversFolderOpen && (
                     <div style={styles.folderContent}>
-                      {['automotive', 'luxury-decor', 'brands', 'weddings', 'parties'].map((catId) => {
+                      {['automotive', 'luxury-decor', 'brands', 'weddings', 'parties', 'photography', 'modeling'].map((catId) => {
                         const customCover = customCovers.find(c => c.category === catId);
                         const defaultCovers: Record<string, string> = {
                           automotive: '/assets/images/car.png',
                           'luxury-decor': '/assets/images/decor.png',
                           brands: '/assets/images/haldi.png',
                           weddings: '/assets/images/wedding.png',
-                          parties: '/assets/images/gimbal-hero.png'
+                          parties: '/assets/images/gimbal-hero.png',
+                          photography: '/assets/images/gimbal-hero.png',
+                          modeling: '/assets/images/profile.jpg'
                         };
                         const catTitles: Record<string, string> = {
                           automotive: 'Automotive Showcases',
                           'luxury-decor': 'Luxury Decor & Real Estate',
                           brands: 'Brand & Commercial Reels',
                           weddings: 'Premium Weddings',
-                          parties: 'Parties (Birthday & Baby Shower)'
+                          parties: 'Parties (Birthday & Baby Shower)',
+                          photography: 'Photography',
+                          modeling: 'Modeling'
                         };
                         const currentCoverUrl = customCover ? customCover.mediaUrl : defaultCovers[catId];
 
